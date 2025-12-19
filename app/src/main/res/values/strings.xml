@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">OpenSurfcast</string>
+    <string name="greeting">Hello %1$s!</string>
 </resources>
