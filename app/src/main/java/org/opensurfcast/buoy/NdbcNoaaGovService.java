@@ -11,12 +11,12 @@ public class NdbcNoaaGovService {
 
     private static final String URL_FMT = "https://www.ndbc.noaa.gov/data/realtime2/%s.txt";
 
-    public static HttpResponse<List<BuoyObs>> buoyObservations(
+    public static HttpResponse<List<BuoyStdMetData>> fetchBuoyStdMetData(
             String stationId,
             String lastModified,
             String eTag) throws IOException {
         String url = String.format(URL_FMT, stationId);
-        return HttpClient.send(new HttpRequest(url, lastModified, eTag), BuoyObsParser::parse);
+        return HttpClient.send(new HttpRequest(url, lastModified, eTag), BuoyStdMetDataParser::parse);
     }
 
 }

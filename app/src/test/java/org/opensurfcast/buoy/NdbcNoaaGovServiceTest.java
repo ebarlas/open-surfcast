@@ -30,7 +30,7 @@ public class NdbcNoaaGovServiceTest {
 
     @Test
     public void testFetchStation() throws IOException {
-        HttpResponse<List<BuoyObs>> response = NdbcNoaaGovService.buoyObservations(stationId, null, null);
+        HttpResponse<List<BuoyStdMetData>> response = NdbcNoaaGovService.fetchBuoyStdMetData(stationId, null, null);
 
         assertTrue(response.present());
         assertNotNull(response.body());
@@ -41,17 +41,17 @@ public class NdbcNoaaGovServiceTest {
         assertNotNull("ETag should be returned", response.eTag());
 
         // Repeat with Last-Modified should return not modified
-        HttpResponse<List<BuoyObs>> cachedByLastModified = 
-                NdbcNoaaGovService.buoyObservations(stationId, response.lastModified(), null);
+        HttpResponse<List<BuoyStdMetData>> cachedByLastModified =
+                NdbcNoaaGovService.fetchBuoyStdMetData(stationId, response.lastModified(), null);
         assertFalse("Should return 304 with Last-Modified", cachedByLastModified.present());
 
         // Repeat with ETag should return not modified
-        HttpResponse<List<BuoyObs>> cachedByEtag = 
-                NdbcNoaaGovService.buoyObservations(stationId, null, response.eTag());
+        HttpResponse<List<BuoyStdMetData>> cachedByEtag =
+                NdbcNoaaGovService.fetchBuoyStdMetData(stationId, null, response.eTag());
         assertFalse("Should return 304 with ETag", cachedByEtag.present());
     }
 
-    private void assertValidObservation(BuoyObs obs) {
+    private void assertValidObservation(BuoyStdMetData obs) {
         assertTrue("Year should be recent", obs.getYear() >= 2020);
         assertTrue("Month should be 1-12", obs.getMonth() >= 1 && obs.getMonth() <= 12);
         assertTrue("Day should be 1-31", obs.getDay() >= 1 && obs.getDay() <= 31);

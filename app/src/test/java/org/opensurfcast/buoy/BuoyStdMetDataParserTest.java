@@ -9,7 +9,7 @@ import org.junit.Test;
 
 import java.util.List;
 
-public class BuoyObsParserTest {
+public class BuoyStdMetDataParserTest {
 
     private static final String TEST_DATA = """
             #YY  MM DD hh mm WDIR WSPD GST  WVHT   DPD   APD MWD   PRES  ATMP  WTMP  DEWP  VIS PTDY  TIDE
@@ -24,14 +24,14 @@ public class BuoyObsParserTest {
 
     @Test
     public void testParseReturnsCorrectCount() {
-        List<BuoyObs> observations = BuoyObsParser.parse(TEST_DATA);
+        List<BuoyStdMetData> observations = BuoyStdMetDataParser.parse(TEST_DATA);
         assertEquals(6, observations.size());
     }
 
     @Test
     public void testParseDateTime() {
-        List<BuoyObs> observations = BuoyObsParser.parse(TEST_DATA);
-        BuoyObs first = observations.get(0);
+        List<BuoyStdMetData> observations = BuoyStdMetDataParser.parse(TEST_DATA);
+        BuoyStdMetData first = observations.get(0);
 
         assertEquals(2026, first.getYear());
         assertEquals(1, first.getMonth());
@@ -43,8 +43,8 @@ public class BuoyObsParserTest {
 
     @Test
     public void testParseCompleteObservation() {
-        List<BuoyObs> observations = BuoyObsParser.parse(TEST_DATA);
-        BuoyObs first = observations.get(0);
+        List<BuoyStdMetData> observations = BuoyStdMetDataParser.parse(TEST_DATA);
+        BuoyStdMetData first = observations.get(0);
 
         assertEquals(Integer.valueOf(80), first.getWindDirection());
         assertEquals(12.0, first.getWindSpeed(), 0.001);
@@ -64,8 +64,8 @@ public class BuoyObsParserTest {
 
     @Test
     public void testParseMissingWaveData() {
-        List<BuoyObs> observations = BuoyObsParser.parse(TEST_DATA);
-        BuoyObs second = observations.get(1); // Row with MM wave data
+        List<BuoyStdMetData> observations = BuoyStdMetDataParser.parse(TEST_DATA);
+        BuoyStdMetData second = observations.get(1); // Row with MM wave data
 
         assertEquals(Integer.valueOf(80), second.getWindDirection());
         assertNull(second.getWaveHeight());
@@ -77,15 +77,15 @@ public class BuoyObsParserTest {
 
     @Test
     public void testParseNegativeValue() {
-        List<BuoyObs> observations = BuoyObsParser.parse(TEST_DATA);
-        BuoyObs last = observations.get(5);
+        List<BuoyStdMetData> observations = BuoyStdMetDataParser.parse(TEST_DATA);
+        BuoyStdMetData last = observations.get(5);
 
         assertEquals(-1.5, last.getPressureTendency(), 0.001);
     }
 
     @Test
     public void testParseEmptyInput() {
-        List<BuoyObs> observations = BuoyObsParser.parse("");
+        List<BuoyStdMetData> observations = BuoyStdMetDataParser.parse("");
         assertEquals(0, observations.size());
     }
 
@@ -95,14 +95,14 @@ public class BuoyObsParserTest {
                 #YY  MM DD hh mm WDIR WSPD GST  WVHT   DPD   APD MWD   PRES  ATMP  WTMP  DEWP  VIS PTDY  TIDE
                 #yr  mo dy hr mn degT m/s  m/s     m   sec   sec degT   hPa  degC  degC  degC  nmi  hPa    ft
                 """;
-        List<BuoyObs> observations = BuoyObsParser.parse(headersOnly);
+        List<BuoyStdMetData> observations = BuoyStdMetDataParser.parse(headersOnly);
         assertEquals(0, observations.size());
     }
 
     @Test
     public void testParseMalformedInputThrows() {
         String malformed = "2026 01 01 00 50  80 12.0 14.0";
-        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> BuoyObsParser.parse(malformed));
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> BuoyStdMetDataParser.parse(malformed));
         assertTrue(ex.getCause().getMessage().contains("Expected 19 columns"));
     }
 }

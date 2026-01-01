@@ -14,13 +14,13 @@ import java.util.List;
  * Parser for NDBC standard meteorological data format.
  * Format specification: https://www.ndbc.noaa.gov/faq/measdes.shtml#stdmet
  */
-public class BuoyObsParser {
+public class BuoyStdMetDataParser {
 
     private static final String MISSING_VALUE = "MM";
 
     private static final int EXPECTED_COLUMNS = 19;
 
-    public static List<BuoyObs> parse(String text) {
+    public static List<BuoyStdMetData> parse(String text) {
         try {
             return parse(new ByteArrayInputStream(text.getBytes()));
         } catch (IOException e) {
@@ -28,8 +28,8 @@ public class BuoyObsParser {
         }
     }
 
-    public static List<BuoyObs> parse(InputStream inputStream) throws IOException {
-        List<BuoyObs> observations = new ArrayList<>();
+    public static List<BuoyStdMetData> parse(InputStream inputStream) throws IOException {
+        List<BuoyStdMetData> observations = new ArrayList<>();
         BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
 
         String line;
@@ -39,21 +39,21 @@ public class BuoyObsParser {
                 continue;
             }
 
-            BuoyObs obs = parseLine(line);
+            BuoyStdMetData obs = parseLine(line);
             observations.add(obs);
         }
 
         return observations;
     }
 
-    private static BuoyObs parseLine(String line) throws IOException {
+    private static BuoyStdMetData parseLine(String line) throws IOException {
         String[] parts = line.trim().split("\\s+");
         if (parts.length < EXPECTED_COLUMNS) {
             throw new IOException("Expected " + EXPECTED_COLUMNS + " columns but found " + parts.length);
         }
 
         ColumnScanner scanner = new ColumnScanner(parts);
-        BuoyObs obs = new BuoyObs();
+        BuoyStdMetData obs = new BuoyStdMetData();
 
         int year = scanner.nextInt();
         int month = scanner.nextInt();

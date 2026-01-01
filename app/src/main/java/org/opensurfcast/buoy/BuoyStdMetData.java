@@ -9,7 +9,7 @@ package org.opensurfcast.buoy;
  * All measurements are in metric units (SI) unless otherwise noted.
  * Times are in UTC.
  */
-public class BuoyObs {
+public class BuoyStdMetData {
 
     /**
      * Year of observation (YY) - Four-digit year.
