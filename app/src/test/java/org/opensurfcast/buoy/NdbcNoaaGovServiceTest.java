@@ -29,13 +29,13 @@ public class NdbcNoaaGovServiceTest {
     }
 
     @Test
-    public void testFetchStation() throws IOException {
+    public void testFetchBuoyStdMetData() throws IOException {
         HttpResponse<List<BuoyStdMetData>> response = NdbcNoaaGovService.fetchBuoyStdMetData(stationId, null, null);
 
         assertTrue(response.present());
         assertNotNull(response.body());
         assertFalse(response.body().isEmpty());
-        assertValidObservation(response.body().get(0));
+        assertValidStdMetObservation(response.body().get(0));
 
         assertNotNull("Last-Modified should be returned", response.lastModified());
         assertNotNull("ETag should be returned", response.eTag());
@@ -51,7 +51,39 @@ public class NdbcNoaaGovServiceTest {
         assertFalse("Should return 304 with ETag", cachedByEtag.present());
     }
 
-    private void assertValidObservation(BuoyStdMetData obs) {
+    @Test
+    public void testFetchBuoySpecWaveData() throws IOException {
+        HttpResponse<List<BuoySpecWaveData>> response = NdbcNoaaGovService.fetchBuoySpecWaveData(stationId, null, null);
+
+        assertTrue(response.present());
+        assertNotNull(response.body());
+        assertFalse(response.body().isEmpty());
+        assertValidSpecWaveObservation(response.body().get(0));
+
+        assertNotNull("Last-Modified should be returned", response.lastModified());
+        assertNotNull("ETag should be returned", response.eTag());
+
+        // Repeat with Last-Modified should return not modified
+        HttpResponse<List<BuoySpecWaveData>> cachedByLastModified =
+                NdbcNoaaGovService.fetchBuoySpecWaveData(stationId, response.lastModified(), null);
+        assertFalse("Should return 304 with Last-Modified", cachedByLastModified.present());
+
+        // Repeat with ETag should return not modified
+        HttpResponse<List<BuoySpecWaveData>> cachedByEtag =
+                NdbcNoaaGovService.fetchBuoySpecWaveData(stationId, null, response.eTag());
+        assertFalse("Should return 304 with ETag", cachedByEtag.present());
+    }
+
+    private void assertValidStdMetObservation(BuoyStdMetData obs) {
+        assertTrue("Year should be recent", obs.getYear() >= 2020);
+        assertTrue("Month should be 1-12", obs.getMonth() >= 1 && obs.getMonth() <= 12);
+        assertTrue("Day should be 1-31", obs.getDay() >= 1 && obs.getDay() <= 31);
+        assertTrue("Hour should be 0-23", obs.getHour() >= 0 && obs.getHour() <= 23);
+        assertTrue("Minute should be 0-59", obs.getMinute() >= 0 && obs.getMinute() <= 59);
+        assertTrue("Epoch should be positive", obs.getEpochSeconds() > 0);
+    }
+
+    private void assertValidSpecWaveObservation(BuoySpecWaveData obs) {
         assertTrue("Year should be recent", obs.getYear() >= 2020);
         assertTrue("Month should be 1-12", obs.getMonth() >= 1 && obs.getMonth() <= 12);
         assertTrue("Day should be 1-31", obs.getDay() >= 1 && obs.getDay() <= 31);

@@ -7,6 +7,9 @@ import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 
 public class BuoyStdMetDataParserTest {
@@ -22,15 +25,23 @@ public class BuoyStdMetDataParserTest {
             2026 01 01 00 00  80 11.0 13.0    MM    MM    MM  MM 1012.5  11.4  13.4   9.2   MM -1.5    MM
             """;
 
+    private static InputStream toInputStream(String text) {
+        return new ByteArrayInputStream(text.getBytes());
+    }
+
+    private static List<BuoyStdMetData> parse(String text) throws IOException {
+        return BuoyStdMetDataParser.parse(toInputStream(text));
+    }
+
     @Test
-    public void testParseReturnsCorrectCount() {
-        List<BuoyStdMetData> observations = BuoyStdMetDataParser.parse(TEST_DATA);
+    public void testParseReturnsCorrectCount() throws IOException {
+        List<BuoyStdMetData> observations = parse(TEST_DATA);
         assertEquals(6, observations.size());
     }
 
     @Test
-    public void testParseDateTime() {
-        List<BuoyStdMetData> observations = BuoyStdMetDataParser.parse(TEST_DATA);
+    public void testParseDateTime() throws IOException {
+        List<BuoyStdMetData> observations = parse(TEST_DATA);
         BuoyStdMetData first = observations.get(0);
 
         assertEquals(2026, first.getYear());
@@ -42,8 +53,8 @@ public class BuoyStdMetDataParserTest {
     }
 
     @Test
-    public void testParseCompleteObservation() {
-        List<BuoyStdMetData> observations = BuoyStdMetDataParser.parse(TEST_DATA);
+    public void testParseCompleteObservation() throws IOException {
+        List<BuoyStdMetData> observations = parse(TEST_DATA);
         BuoyStdMetData first = observations.get(0);
 
         assertEquals(Integer.valueOf(80), first.getWindDirection());
@@ -63,8 +74,8 @@ public class BuoyStdMetDataParserTest {
     }
 
     @Test
-    public void testParseMissingWaveData() {
-        List<BuoyStdMetData> observations = BuoyStdMetDataParser.parse(TEST_DATA);
+    public void testParseMissingWaveData() throws IOException {
+        List<BuoyStdMetData> observations = parse(TEST_DATA);
         BuoyStdMetData second = observations.get(1); // Row with MM wave data
 
         assertEquals(Integer.valueOf(80), second.getWindDirection());
@@ -76,33 +87,33 @@ public class BuoyStdMetDataParserTest {
     }
 
     @Test
-    public void testParseNegativeValue() {
-        List<BuoyStdMetData> observations = BuoyStdMetDataParser.parse(TEST_DATA);
+    public void testParseNegativeValue() throws IOException {
+        List<BuoyStdMetData> observations = parse(TEST_DATA);
         BuoyStdMetData last = observations.get(5);
 
         assertEquals(-1.5, last.getPressureTendency(), 0.001);
     }
 
     @Test
-    public void testParseEmptyInput() {
-        List<BuoyStdMetData> observations = BuoyStdMetDataParser.parse("");
+    public void testParseEmptyInput() throws IOException {
+        List<BuoyStdMetData> observations = parse("");
         assertEquals(0, observations.size());
     }
 
     @Test
-    public void testParseHeadersOnly() {
+    public void testParseHeadersOnly() throws IOException {
         String headersOnly = """
                 #YY  MM DD hh mm WDIR WSPD GST  WVHT   DPD   APD MWD   PRES  ATMP  WTMP  DEWP  VIS PTDY  TIDE
                 #yr  mo dy hr mn degT m/s  m/s     m   sec   sec degT   hPa  degC  degC  degC  nmi  hPa    ft
                 """;
-        List<BuoyStdMetData> observations = BuoyStdMetDataParser.parse(headersOnly);
+        List<BuoyStdMetData> observations = parse(headersOnly);
         assertEquals(0, observations.size());
     }
 
     @Test
     public void testParseMalformedInputThrows() {
         String malformed = "2026 01 01 00 50  80 12.0 14.0";
-        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> BuoyStdMetDataParser.parse(malformed));
-        assertTrue(ex.getCause().getMessage().contains("Expected 19 columns"));
+        IOException ex = assertThrows(IOException.class, () -> parse(malformed));
+        assertTrue(ex.getMessage().contains("Expected 19 columns"));
     }
 }
