@@ -39,9 +39,7 @@ public class NdbcNoaaGovService {
     }
 
     public static Set<String> fetchStationIdsWithStdMetAndSpecWave() throws IOException {
-        return HttpClient.send(
-                new HttpRequest(DIRECTORY_URL, null, null),
-                BuoyStationDirectoryParser::parseStationsWithStdMetAndSpecWave).body();
+        return HttpClient.send(DIRECTORY_URL, BuoyStationDirectoryParser::parseStationsWithStdMetAndSpecWave);
     }
 
 }

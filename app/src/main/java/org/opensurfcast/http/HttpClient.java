@@ -7,6 +7,10 @@ import java.net.URL;
 
 public class HttpClient {
 
+    public static <T> T send(String url, Parser<T> parser) throws IOException {
+        return send(new HttpRequest(url, null, null), parser).body();
+    }
+
     public static <T> HttpResponse<T> send(HttpRequest request, Parser<T> parser) throws IOException {
         URL url = new URL(request.url());
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
