@@ -1,8 +1,7 @@
 package org.opensurfcast.buoy;
 
 import org.opensurfcast.http.HttpClient;
-import org.opensurfcast.http.HttpRequest;
-import org.opensurfcast.http.HttpResponse;
+import org.opensurfcast.http.Modified;
 
 import java.io.IOException;
 import java.util.List;
@@ -14,28 +13,23 @@ public class NdbcNoaaGovService {
     private static final String ACTIVE_STATIONS_URL = "https://www.ndbc.noaa.gov/activestations.xml";
     private static final String DIRECTORY_URL = "https://www.ndbc.noaa.gov/data/realtime2/";
 
-    public static HttpResponse<List<BuoyStdMetData>> fetchBuoyStdMetData(
+    public static Modified<List<BuoyStdMetData>> fetchBuoyStdMetData(
             String stationId,
-            String lastModified,
-            String eTag) throws IOException {
+            String lastModified) throws IOException {
         String url = String.format(DATA_URL, stationId, "txt");
-        return HttpClient.send(new HttpRequest(url, lastModified, eTag), BuoyStdMetDataParser::parse);
+        return HttpClient.send(url, lastModified, BuoyStdMetDataParser::parse);
     }
 
-    public static HttpResponse<List<BuoySpecWaveData>> fetchBuoySpecWaveData(
+    public static Modified<List<BuoySpecWaveData>> fetchBuoySpecWaveData(
             String stationId,
-            String lastModified,
-            String eTag) throws IOException {
+            String lastModified) throws IOException {
         String url = String.format(DATA_URL, stationId, "spec");
-        return HttpClient.send(new HttpRequest(url, lastModified, eTag), BuoySpecWaveDataParser::parse);
+        return HttpClient.send(url, lastModified, BuoySpecWaveDataParser::parse);
     }
 
-    public static HttpResponse<List<BuoyStation>> fetchBuoyStations(
-            String lastModified,
-            String eTag) throws IOException {
-        return HttpClient.send(
-                new HttpRequest(ACTIVE_STATIONS_URL, lastModified, eTag),
-                BuoyStationParser::parse);
+    public static Modified<List<BuoyStation>> fetchBuoyStations(
+            String lastModified) throws IOException {
+        return HttpClient.send(ACTIVE_STATIONS_URL, lastModified, BuoyStationParser::parse);
     }
 
     public static Set<String> fetchStationIdsWithStdMetAndSpecWave() throws IOException {
