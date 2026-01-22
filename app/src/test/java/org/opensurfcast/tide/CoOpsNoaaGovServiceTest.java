@@ -154,5 +154,142 @@ public class CoOpsNoaaGovServiceTest {
         assertTrue("Epoch should be in January 2026",
                 prediction.epochSeconds >= 1767225600L && prediction.epochSeconds < 1769904000L);
     }
+
+    /**
+     * Tests current station fetching. Combined into a single test to avoid
+     * multiple expensive API calls (~1MB download).
+     */
+    @Test
+    public void testFetchCurrentStations() throws IOException {
+        List<CurrentStation> stations = CoOpsNoaaGovService.fetchCurrentStations();
+
+        // Basic validation
+        assertNotNull(stations);
+        assertFalse(stations.isEmpty());
+        assertTrue("Should have many stations", stations.size() > 1000);
+
+        CurrentStation station = stations.get(0);
+        assertNotNull("Station ID should not be null", station.id);
+        assertFalse("Station ID should not be empty", station.id.isEmpty());
+        assertTrue("Latitude should be valid", station.latitude >= -90 && station.latitude <= 90);
+        assertTrue("Longitude should be valid", station.longitude >= -180 && station.longitude <= 180);
+
+        // Check for known station (ACT0091 - Eastport, Friar Roads)
+        CurrentStation knownStation = stations.stream()
+                .filter(s -> s.id != null && s.id.startsWith("ACT0091"))
+                .findFirst()
+                .orElse(null);
+        assertNotNull("Known station (ACT0091) should exist", knownStation);
+        assertNotNull("Name should not be null", knownStation.name);
+
+        // All stations should have a type defined
+        long withTypeCount = stations.stream()
+                .filter(s -> s.type != null && !s.type.isEmpty())
+                .count();
+        assertEquals("All stations should have a type", withTypeCount, stations.size());
+
+        // Check that at least some stations are reference or subordinate
+        long referenceCount = stations.stream()
+                .filter(CurrentStation::isReferenceStation)
+                .count();
+        long subordinateCount = stations.stream()
+                .filter(CurrentStation::isSubordinateStation)
+                .count();
+        assertTrue("Should have reference or subordinate stations",
+                referenceCount > 0 || subordinateCount > 0);
+
+        // Some stations have multiple bins (depth levels)
+        long multipleBinCount = stations.stream()
+                .filter(s -> s.currentBin != null && s.currentBin > 1)
+                .count();
+        assertTrue("Should have stations with multiple bins", multipleBinCount > 0);
+    }
+
+    @Test
+    public void testFetchCurrentPredictions() throws IOException {
+        // Fetch one week of predictions for Admiralty Inlet
+        List<CurrentPrediction> predictions = CoOpsNoaaGovService.fetchCurrentPredictions(
+                "ACT0091", "20260101", "20260107");
+
+        assertNotNull(predictions);
+        assertFalse(predictions.isEmpty());
+        // Expect roughly 4 events per day (2 floods, 2 ebbs or slack) * 7 days
+        assertTrue("Should have multiple predictions", predictions.size() >= 20);
+
+        CurrentPrediction prediction = predictions.get(0);
+        assertNotNull("Timestamp should not be null", prediction.timestamp);
+        assertFalse("Timestamp should not be empty", prediction.timestamp.isEmpty());
+        assertTrue("Epoch seconds should be positive", prediction.epochSeconds > 0);
+        assertNotNull("Type should not be null", prediction.type);
+    }
+
+    @Test
+    public void testFetchCurrentPredictionsHasFloodAndEbbTypes() throws IOException {
+        List<CurrentPrediction> predictions = CoOpsNoaaGovService.fetchCurrentPredictions(
+                "ACT0091", "20260101", "20260107");
+
+        long floodCount = predictions.stream()
+                .filter(CurrentPrediction::isFlood)
+                .count();
+        long ebbCount = predictions.stream()
+                .filter(CurrentPrediction::isEbb)
+                .count();
+
+        assertTrue("Should have flood predictions", floodCount > 0);
+        assertTrue("Should have ebb predictions", ebbCount > 0);
+    }
+
+    @Test
+    public void testFetchCurrentPredictionsVelocitiesAreReasonable() throws IOException {
+        List<CurrentPrediction> predictions = CoOpsNoaaGovService.fetchCurrentPredictions(
+                "ACT0091", "20260101", "20260107");
+
+        for (CurrentPrediction prediction : predictions) {
+            // Velocities in cm/s - typical range for tidal currents
+            assertTrue("Velocity should be reasonable: " + prediction.velocityMajor,
+                    prediction.velocityMajor >= -500 && prediction.velocityMajor <= 500);
+        }
+    }
+
+    @Test
+    public void testFetchCurrentPredictionsTimestampsAreChronological() throws IOException {
+        List<CurrentPrediction> predictions = CoOpsNoaaGovService.fetchCurrentPredictions(
+                "ACT0091", "20260101", "20260107");
+
+        for (int i = 1; i < predictions.size(); i++) {
+            CurrentPrediction prev = predictions.get(i - 1);
+            CurrentPrediction curr = predictions.get(i);
+            assertTrue("Predictions should be chronological",
+                    curr.epochSeconds > prev.epochSeconds);
+        }
+    }
+
+    @Test
+    public void testFetchCurrentPredictionsHasDirections() throws IOException {
+        List<CurrentPrediction> predictions = CoOpsNoaaGovService.fetchCurrentPredictions(
+                "ACT0091", "20260101", "20260107");
+
+        // All predictions should have valid direction data (0-360 degrees)
+        for (CurrentPrediction prediction : predictions) {
+            assertTrue("Flood direction should be valid: " + prediction.meanFloodDirection,
+                    prediction.meanFloodDirection >= 0 && prediction.meanFloodDirection <= 360);
+            assertTrue("Ebb direction should be valid: " + prediction.meanEbbDirection,
+                    prediction.meanEbbDirection >= 0 && prediction.meanEbbDirection <= 360);
+        }
+    }
+
+    @Test
+    public void testFetchCurrentPredictionsEpochSecondsMatchesTimestamp() throws IOException {
+        List<CurrentPrediction> predictions = CoOpsNoaaGovService.fetchCurrentPredictions(
+                "ACT0091", "20260101", "20260102");
+
+        CurrentPrediction prediction = predictions.get(0);
+        // Verify timestamp starts with expected date
+        assertTrue("Timestamp should start with 2026-01",
+                prediction.timestamp.startsWith("2026-01"));
+        // Epoch for 2026-01-01 00:00:00 UTC is 1767225600
+        assertTrue("Epoch should be in January 2026",
+                prediction.epochSeconds >= 1767225600L && prediction.epochSeconds < 1769904000L);
+    }
 }
 
