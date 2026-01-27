@@ -1,0 +1,46 @@
+package org.opensurfcast.sync;
+
+import org.opensurfcast.db.CurrentPredictionDb;
+import org.opensurfcast.tasks.BaseTask;
+import org.opensurfcast.tide.CoOpsNoaaGovService;
+import org.opensurfcast.tide.CurrentPrediction;
+
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.time.Duration;
+import java.util.Calendar;
+import java.util.List;
+import java.util.Locale;
+
+/**
+ * Task to fetch current predictions for a specific station.
+ * <p>
+ * Fetches predictions for the next 7 days and updates the local database.
+ */
+public class FetchCurrentPredictionsTask extends BaseTask {
+    private static final String KEY_PREFIX = "FETCH_CURRENT_PREDICTIONS:";
+    private static final Duration COOLDOWN_PERIOD = Duration.ofMinutes(5);
+
+    private final CurrentPredictionDb dataDb;
+    private final String stationId;
+
+    public FetchCurrentPredictionsTask(CurrentPredictionDb dataDb, String stationId) {
+        super(KEY_PREFIX + stationId, COOLDOWN_PERIOD);
+        this.dataDb = dataDb;
+        this.stationId = stationId;
+    }
+
+    @Override
+    protected void execute() throws IOException {
+        // Generate date range: today to 7 days from now
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd", Locale.US);
+        Calendar calendar = Calendar.getInstance();
+        String beginDate = dateFormat.format(calendar.getTime());
+        calendar.add(Calendar.DAY_OF_YEAR, 7);
+        String endDate = dateFormat.format(calendar.getTime());
+
+        List<CurrentPrediction> predictions = CoOpsNoaaGovService.fetchCurrentPredictions(
+                stationId, beginDate, endDate);
+        dataDb.replaceAllForStation(stationId, predictions);
+    }
+}
