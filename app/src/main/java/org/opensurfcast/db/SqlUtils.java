@@ -22,7 +22,7 @@ public final class SqlUtils {
         return sj.toString();
     }
 
-    static <T> List<T> map(Cursor cursor, Function<Cursor, T> mapper) {
+    public static <T> List<T> map(Cursor cursor, Function<Cursor, T> mapper) {
         List<T> result = new ArrayList<>();
         while (cursor.moveToNext()) {
             result.add(mapper.apply(cursor));

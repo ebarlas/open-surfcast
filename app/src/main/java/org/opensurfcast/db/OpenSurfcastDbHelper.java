@@ -13,7 +13,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class OpenSurfcastDbHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "opensurfcast.db";
-    private static final int DATABASE_VERSION = 1;
+    private static final int DATABASE_VERSION = 2;
 
     // Station tables
     public static final String TABLE_BUOY_STATION = "buoy_station";
@@ -25,10 +25,7 @@ public class OpenSurfcastDbHelper extends SQLiteOpenHelper {
     public static final String TABLE_BUOY_STD_MET_DATA = "buoy_std_met_data";
     public static final String TABLE_TIDE_PREDICTION = "tide_prediction";
     public static final String TABLE_CURRENT_PREDICTION = "current_prediction";
-
-    // Common columns
-    public static final String COLUMN_ID = "id";
-    public static final String COLUMN_EPOCH_SECONDS = "epoch_seconds";
+    public static final String TABLE_LOG = "logs";
 
     private static final String CREATE_BUOY_STATION = """
             CREATE TABLE %s (
@@ -169,6 +166,16 @@ public class OpenSurfcastDbHelper extends SQLiteOpenHelper {
             )
             """.formatted(TABLE_CURRENT_PREDICTION, TABLE_CURRENT_STATION);
 
+    private static final String CREATE_LOG = """
+            CREATE TABLE %s (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp INTEGER NOT NULL,
+                level TEXT NOT NULL,
+                message TEXT NOT NULL,
+                stack_trace TEXT
+            )
+            """.formatted(TABLE_LOG);
+
     public OpenSurfcastDbHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
     }
@@ -185,11 +192,15 @@ public class OpenSurfcastDbHelper extends SQLiteOpenHelper {
         db.execSQL(CREATE_BUOY_STD_MET_DATA);
         db.execSQL(CREATE_TIDE_PREDICTION);
         db.execSQL(CREATE_CURRENT_PREDICTION);
+
+        // Create log table
+        db.execSQL(CREATE_LOG);
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         // Drop all tables and recreate on upgrade
+        db.execSQL("DROP TABLE IF EXISTS " + TABLE_LOG);
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_CURRENT_PREDICTION);
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_TIDE_PREDICTION);
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_BUOY_STD_MET_DATA);
