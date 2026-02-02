@@ -7,6 +7,7 @@ import org.opensurfcast.db.CurrentPredictionDb;
 import org.opensurfcast.db.CurrentStationDb;
 import org.opensurfcast.db.TidePredictionDb;
 import org.opensurfcast.db.TideStationDb;
+import org.opensurfcast.log.Logger;
 import org.opensurfcast.prefs.UserPreferences;
 import org.opensurfcast.tasks.TaskScheduler;
 
@@ -25,6 +26,7 @@ public class SyncManager {
     private final BuoySpecWaveDataDb buoySpecWaveDataDb;
     private final TidePredictionDb tidePredictionDb;
     private final CurrentPredictionDb currentPredictionDb;
+    private final Logger logger;
 
     /**
      * Creates a new sync manager.
@@ -37,6 +39,7 @@ public class SyncManager {
      * @param buoySpecWaveDataDb    buoy spectral wave data database
      * @param tidePredictionDb      tide prediction database
      * @param currentPredictionDb   current prediction database
+     * @param logger                logger for task logging
      */
     public SyncManager(
             TaskScheduler scheduler,
@@ -46,7 +49,8 @@ public class SyncManager {
             BuoyStdMetDataDb buoyStdMetDataDb,
             BuoySpecWaveDataDb buoySpecWaveDataDb,
             TidePredictionDb tidePredictionDb,
-            CurrentPredictionDb currentPredictionDb) {
+            CurrentPredictionDb currentPredictionDb,
+            Logger logger) {
         this.scheduler = scheduler;
         this.buoyStationDb = buoyStationDb;
         this.tideStationDb = tideStationDb;
@@ -55,6 +59,7 @@ public class SyncManager {
         this.buoySpecWaveDataDb = buoySpecWaveDataDb;
         this.tidePredictionDb = tidePredictionDb;
         this.currentPredictionDb = currentPredictionDb;
+        this.logger = logger;
     }
 
     /**
@@ -72,9 +77,9 @@ public class SyncManager {
      * Submits tasks to fetch buoy, tide, and current station catalogs.
      */
     public void fetchAllStations() {
-        scheduler.submit(new FetchBuoyStationsTask(buoyStationDb));
-        scheduler.submit(new FetchTideStationsTask(tideStationDb));
-        scheduler.submit(new FetchCurrentStationsTask(currentStationDb));
+        scheduler.submit(new FetchBuoyStationsTask(buoyStationDb, logger));
+        scheduler.submit(new FetchTideStationsTask(tideStationDb, logger));
+        scheduler.submit(new FetchCurrentStationsTask(currentStationDb, logger));
     }
 
     /**
@@ -88,18 +93,18 @@ public class SyncManager {
     public void fetchPreferredStationData(UserPreferences prefs) {
         // Fetch buoy data
         for (String stationId : prefs.getPreferredBuoyStations()) {
-            scheduler.submit(new FetchBuoyStdMetDataTask(buoyStdMetDataDb, stationId));
-            scheduler.submit(new FetchBuoySpecWaveDataTask(buoySpecWaveDataDb, stationId));
+            scheduler.submit(new FetchBuoyStdMetDataTask(buoyStdMetDataDb, stationId, logger));
+            scheduler.submit(new FetchBuoySpecWaveDataTask(buoySpecWaveDataDb, stationId, logger));
         }
 
         // Fetch tide predictions
         for (String stationId : prefs.getPreferredTideStations()) {
-            scheduler.submit(new FetchTidePredictionsTask(tidePredictionDb, stationId));
+            scheduler.submit(new FetchTidePredictionsTask(tidePredictionDb, stationId, logger));
         }
 
         // Fetch current predictions
         for (String stationId : prefs.getPreferredCurrentStations()) {
-            scheduler.submit(new FetchCurrentPredictionsTask(currentPredictionDb, stationId));
+            scheduler.submit(new FetchCurrentPredictionsTask(currentPredictionDb, stationId, logger));
         }
     }
 }

@@ -1,9 +1,11 @@
 package org.opensurfcast.sync;
 
 import org.opensurfcast.db.CurrentStationDb;
+import org.opensurfcast.log.Logger;
 import org.opensurfcast.tasks.BaseTask;
 import org.opensurfcast.tide.CoOpsNoaaGovService;
 import org.opensurfcast.tide.CurrentStation;
+import org.opensurfcast.timer.Timer;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -19,15 +21,20 @@ public class FetchCurrentStationsTask extends BaseTask {
     private static final Duration COOLDOWN_PERIOD = Duration.ofHours(1);
 
     private final CurrentStationDb stationDb;
+    private final Logger logger;
 
-    public FetchCurrentStationsTask(CurrentStationDb stationDb) {
+    public FetchCurrentStationsTask(CurrentStationDb stationDb, Logger logger) {
         super(KEY, COOLDOWN_PERIOD);
         this.stationDb = stationDb;
+        this.logger = logger;
     }
 
     @Override
     protected void execute() throws IOException {
+        Timer timer = new Timer();
         List<CurrentStation> stations = CoOpsNoaaGovService.fetchCurrentStations();
+        long elapsed = timer.elapsed();
         stationDb.replaceAll(stations);
+        logger.info("Fetched " + stations.size() + " current stations (" + elapsed + "ms)");
     }
 }

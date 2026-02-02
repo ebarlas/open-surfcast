@@ -1,9 +1,11 @@
 package org.opensurfcast.sync;
 
 import org.opensurfcast.db.CurrentPredictionDb;
+import org.opensurfcast.log.Logger;
 import org.opensurfcast.tasks.BaseTask;
 import org.opensurfcast.tide.CoOpsNoaaGovService;
 import org.opensurfcast.tide.CurrentPrediction;
+import org.opensurfcast.timer.Timer;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -23,11 +25,13 @@ public class FetchCurrentPredictionsTask extends BaseTask {
 
     private final CurrentPredictionDb dataDb;
     private final String stationId;
+    private final Logger logger;
 
-    public FetchCurrentPredictionsTask(CurrentPredictionDb dataDb, String stationId) {
+    public FetchCurrentPredictionsTask(CurrentPredictionDb dataDb, String stationId, Logger logger) {
         super(KEY_PREFIX + stationId, COOLDOWN_PERIOD);
         this.dataDb = dataDb;
         this.stationId = stationId;
+        this.logger = logger;
     }
 
     @Override
@@ -39,8 +43,11 @@ public class FetchCurrentPredictionsTask extends BaseTask {
         calendar.add(Calendar.DAY_OF_YEAR, 7);
         String endDate = dateFormat.format(calendar.getTime());
 
+        Timer timer = new Timer();
         List<CurrentPrediction> predictions = CoOpsNoaaGovService.fetchCurrentPredictions(
                 stationId, beginDate, endDate);
+        long elapsed = timer.elapsed();
         dataDb.replaceAllForStation(stationId, predictions);
+        logger.info("Fetched " + predictions.size() + " current predictions for station " + stationId + " (" + elapsed + "ms)");
     }
 }
