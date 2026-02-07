@@ -14,7 +14,8 @@ public interface TaskListener {
      *
      * @param task the task that started
      */
-    void onTaskStarted(Task task);
+    default void onTaskStarted(Task task) {
+    }
 
     /**
      * Called when a task completes successfully.
@@ -23,7 +24,8 @@ public interface TaskListener {
      *
      * @param task the task that completed
      */
-    void onTaskCompleted(Task task);
+    default void onTaskCompleted(Task task) {
+    }
 
     /**
      * Called when a task fails with an error.
@@ -33,5 +35,6 @@ public interface TaskListener {
      * @param task  the task that failed
      * @param error the exception that caused the failure
      */
-    void onTaskFailed(Task task, Exception error);
+    default void onTaskFailed(Task task, Exception error) {
+    }
 }

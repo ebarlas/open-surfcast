@@ -1,10 +1,106 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="purple_200">#FFBB86FC</color>
-    <color name="purple_500">#FF6200EE</color>
-    <color name="purple_700">#FF3700B3</color>
-    <color name="teal_200">#FF03DAC5</color>
-    <color name="teal_700">#FF018786</color>
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
+    <!-- ============================================================ -->
+    <!-- Ocean-themed Material 3 color tokens (light)                 -->
+    <!-- ============================================================ -->
+
+    <!-- Primary -->
+    <color name="md_theme_light_primary">#0D47A1</color>
+    <color name="md_theme_light_onPrimary">#FFFFFF</color>
+    <color name="md_theme_light_primaryContainer">#D1E4FF</color>
+    <color name="md_theme_light_onPrimaryContainer">#001D36</color>
+
+    <!-- Secondary -->
+    <color name="md_theme_light_secondary">#00897B</color>
+    <color name="md_theme_light_onSecondary">#FFFFFF</color>
+    <color name="md_theme_light_secondaryContainer">#B2DFDB</color>
+    <color name="md_theme_light_onSecondaryContainer">#002B27</color>
+
+    <!-- Tertiary -->
+    <color name="md_theme_light_tertiary">#0277BD</color>
+    <color name="md_theme_light_onTertiary">#FFFFFF</color>
+    <color name="md_theme_light_tertiaryContainer">#B3E5FC</color>
+    <color name="md_theme_light_onTertiaryContainer">#001F2A</color>
+
+    <!-- Error -->
+    <color name="md_theme_light_error">#BA1A1A</color>
+    <color name="md_theme_light_onError">#FFFFFF</color>
+    <color name="md_theme_light_errorContainer">#FFDAD6</color>
+    <color name="md_theme_light_onErrorContainer">#410002</color>
+
+    <!-- Background / Surface -->
+    <color name="md_theme_light_background">#F8FBFF</color>
+    <color name="md_theme_light_onBackground">#191C20</color>
+    <color name="md_theme_light_surface">#F8FBFF</color>
+    <color name="md_theme_light_onSurface">#191C20</color>
+    <color name="md_theme_light_surfaceVariant">#DFE3EB</color>
+    <color name="md_theme_light_onSurfaceVariant">#43474E</color>
+    <color name="md_theme_light_surfaceContainerLowest">#FFFFFF</color>
+    <color name="md_theme_light_surfaceContainerLow">#F2F5FA</color>
+    <color name="md_theme_light_surfaceContainer">#ECF0F4</color>
+    <color name="md_theme_light_surfaceContainerHigh">#E6EAEF</color>
+    <color name="md_theme_light_surfaceContainerHighest">#E1E5E9</color>
+
+    <!-- Outline -->
+    <color name="md_theme_light_outline">#73777F</color>
+    <color name="md_theme_light_outlineVariant">#C3C7CF</color>
+
+    <!-- Inverse -->
+    <color name="md_theme_light_inverseSurface">#2E3135</color>
+    <color name="md_theme_light_inverseOnSurface">#EFF0F7</color>
+    <color name="md_theme_light_inversePrimary">#A4C8FF</color>
+
+    <!-- ============================================================ -->
+    <!-- Ocean-themed Material 3 color tokens (dark)                  -->
+    <!-- ============================================================ -->
+
+    <!-- Primary -->
+    <color name="md_theme_dark_primary">#A4C8FF</color>
+    <color name="md_theme_dark_onPrimary">#003060</color>
+    <color name="md_theme_dark_primaryContainer">#0A3D87</color>
+    <color name="md_theme_dark_onPrimaryContainer">#D1E4FF</color>
+
+    <!-- Secondary -->
+    <color name="md_theme_dark_secondary">#80CBC4</color>
+    <color name="md_theme_dark_onSecondary">#003731</color>
+    <color name="md_theme_dark_secondaryContainer">#005048</color>
+    <color name="md_theme_dark_onSecondaryContainer">#B2DFDB</color>
+
+    <!-- Tertiary -->
+    <color name="md_theme_dark_tertiary">#81D4FA</color>
+    <color name="md_theme_dark_onTertiary">#00344A</color>
+    <color name="md_theme_dark_tertiaryContainer">#004C6D</color>
+    <color name="md_theme_dark_onTertiaryContainer">#B3E5FC</color>
+
+    <!-- Error -->
+    <color name="md_theme_dark_error">#FFB4AB</color>
+    <color name="md_theme_dark_onError">#690005</color>
+    <color name="md_theme_dark_errorContainer">#93000A</color>
+    <color name="md_theme_dark_onErrorContainer">#FFDAD6</color>
+
+    <!-- Background / Surface -->
+    <color name="md_theme_dark_background">#101418</color>
+    <color name="md_theme_dark_onBackground">#E1E5E9</color>
+    <color name="md_theme_dark_surface">#101418</color>
+    <color name="md_theme_dark_onSurface">#E1E5E9</color>
+    <color name="md_theme_dark_surfaceVariant">#43474E</color>
+    <color name="md_theme_dark_onSurfaceVariant">#C3C7CF</color>
+    <color name="md_theme_dark_surfaceContainerLowest">#0B0F12</color>
+    <color name="md_theme_dark_surfaceContainerLow">#191C20</color>
+    <color name="md_theme_dark_surfaceContainer">#1D2024</color>
+    <color name="md_theme_dark_surfaceContainerHigh">#272A2F</color>
+    <color name="md_theme_dark_surfaceContainerHighest">#32353A</color>
+
+    <!-- Outline -->
+    <color name="md_theme_dark_outline">#8D9199</color>
+    <color name="md_theme_dark_outlineVariant">#43474E</color>
+
+    <!-- Inverse -->
+    <color name="md_theme_dark_inverseSurface">#E1E5E9</color>
+    <color name="md_theme_dark_inverseOnSurface">#2E3135</color>
+    <color name="md_theme_dark_inversePrimary">#0D47A1</color>
+
+    <!-- Utility (keep for layouts that reference directly) -->
+    <color name="ocean_primary">#FF0D47A1</color>
+    <color name="ocean_secondary">#FF00897B</color>
 </resources>

@@ -11,6 +11,7 @@ import org.opensurfcast.timer.Timer;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Task to fetch the buoy station catalog from NDBC.
@@ -34,11 +35,15 @@ public class FetchBuoyStationsTask extends BaseTask {
     protected void execute() throws IOException {
         Timer timer = new Timer();
         Modified<List<BuoyStation>> result = NdbcNoaaGovService.fetchBuoyStations(null);
+        Set<String> ids = NdbcNoaaGovService.fetchStationIdsWithStdMetAndSpecWave();
         long elapsed = timer.elapsed();
         if (result.value() != null) {
             List<BuoyStation> stations = result.value();
-            stationDb.replaceAll(stations);
-            logger.info("Fetched " + stations.size() + " buoy stations (" + elapsed + "ms)");
+            List<BuoyStation> retained = stations.stream()
+                    .filter(station -> ids.contains(station.getId()))
+                    .toList();
+            stationDb.replaceAll(retained);
+            logger.info("Fetched " + stations.size() + " buoy stations and retained " + retained.size() + " (" + elapsed + "ms)");
         } else {
             logger.info("Buoy stations not modified (" + elapsed + "ms)");
         }

@@ -1,4 +1,23 @@
 <resources>
     <string name="app_name">OpenSurfcast</string>
-    <string name="greeting">Hello %1$s!</string>
+
+    <!-- Buoy list -->
+    <string name="buoy_list_title">My Buoys</string>
+    <string name="empty_buoy_list">No buoys added yet</string>
+    <string name="empty_buoy_list_hint">Tap + to browse the catalog</string>
+    <string name="add_buoy">Add buoy</string>
+    <string name="station_removed">Station removed</string>
+    <string name="undo">Undo</string>
+
+    <!-- Buoy catalog -->
+    <string name="catalog_title">Add Buoy Station</string>
+    <string name="search_hint">Search by name or ID</string>
+    <string name="station_count">%d stations</string>
+    <string name="station_count_one">1 station</string>
+    <string name="no_stations_found">No stations found</string>
+    <string name="catalog_loading">Loading stations\u2026</string>
+
+    <!-- Station details -->
+    <string name="station_id_type">%1$s \u00B7 %2$s</string>
+    <string name="station_coordinates">%1$.4f, %2$.4f</string>
 </resources>
