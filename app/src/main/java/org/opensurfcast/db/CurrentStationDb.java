@@ -78,6 +78,49 @@ public class CurrentStationDb {
         }
     }
 
+    /**
+     * Returns a single current station by ID.
+     *
+     * @param id the station ID
+     * @return the current station, or null if not found
+     */
+    public CurrentStation queryById(String id) {
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+        try (Cursor cursor = db.query(
+                OpenSurfcastDbHelper.TABLE_CURRENT_STATION,
+                null,
+                "id = ?",
+                new String[]{id},
+                null, null, null)) {
+            if (cursor.moveToFirst()) {
+                return fromCursor(cursor);
+            }
+            return null;
+        }
+    }
+
+    /**
+     * Returns current stations matching the given IDs.
+     *
+     * @param ids the set of station IDs to query
+     * @return list of matching current stations
+     */
+    public List<CurrentStation> queryByIds(Set<String> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return Collections.emptyList();
+        }
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+        String placeholders = SqlUtils.buildPlaceholders(ids.size());
+        try (Cursor cursor = db.query(
+                OpenSurfcastDbHelper.TABLE_CURRENT_STATION,
+                null,
+                "id IN (" + placeholders + ")",
+                ids.toArray(new String[0]),
+                null, null, null)) {
+            return SqlUtils.map(cursor, this::fromCursor);
+        }
+    }
+
     private ContentValues toContentValues(CurrentStation station) {
         ContentValues values = new ContentValues();
         values.put("id", station.id);

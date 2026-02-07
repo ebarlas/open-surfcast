@@ -78,6 +78,49 @@ public class BuoyStationDb {
         }
     }
 
+    /**
+     * Returns a single buoy station by ID.
+     *
+     * @param id the station ID
+     * @return the buoy station, or null if not found
+     */
+    public BuoyStation queryById(String id) {
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+        try (Cursor cursor = db.query(
+                OpenSurfcastDbHelper.TABLE_BUOY_STATION,
+                null,
+                "id = ?",
+                new String[]{id},
+                null, null, null)) {
+            if (cursor.moveToFirst()) {
+                return fromCursor(cursor);
+            }
+            return null;
+        }
+    }
+
+    /**
+     * Returns buoy stations matching the given IDs.
+     *
+     * @param ids the set of station IDs to query
+     * @return list of matching buoy stations
+     */
+    public List<BuoyStation> queryByIds(Set<String> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return Collections.emptyList();
+        }
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+        String placeholders = SqlUtils.buildPlaceholders(ids.size());
+        try (Cursor cursor = db.query(
+                OpenSurfcastDbHelper.TABLE_BUOY_STATION,
+                null,
+                "id IN (" + placeholders + ")",
+                ids.toArray(new String[0]),
+                null, null, null)) {
+            return SqlUtils.map(cursor, this::fromCursor);
+        }
+    }
+
     private ContentValues toContentValues(BuoyStation station) {
         ContentValues values = new ContentValues();
         values.put("id", station.getId());
