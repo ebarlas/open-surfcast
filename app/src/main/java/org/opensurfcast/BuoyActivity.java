@@ -32,6 +32,7 @@ import org.opensurfcast.tasks.TaskCooldowns;
 import org.opensurfcast.tasks.TaskScheduler;
 import org.opensurfcast.ui.BuoyListFragment;
 import org.opensurfcast.ui.LogListFragment;
+import org.opensurfcast.ui.SettingsFragment;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -40,6 +41,7 @@ public class BuoyActivity extends AppCompatActivity {
 
     private static final String TAG_BUOYS = "TAG_BUOYS";
     private static final String TAG_LOGS = "TAG_LOGS";
+    private static final String TAG_SETTINGS = "TAG_SETTINGS";
 
     private OpenSurfcastDbHelper dbHelper;
     private BuoyStationDb buoyStationDb;
@@ -84,6 +86,9 @@ public class BuoyActivity extends AppCompatActivity {
             } else if (id == R.id.nav_logs) {
                 switchToFragment(TAG_LOGS);
                 return true;
+            } else if (id == R.id.nav_settings) {
+                switchToFragment(TAG_SETTINGS);
+                return true;
             }
             return false;
         });
@@ -117,6 +122,8 @@ public class BuoyActivity extends AppCompatActivity {
         Fragment fragment;
         if (TAG_LOGS.equals(tag)) {
             fragment = new LogListFragment();
+        } else if (TAG_SETTINGS.equals(tag)) {
+            fragment = new SettingsFragment();
         } else {
             fragment = new BuoyListFragment();
         }

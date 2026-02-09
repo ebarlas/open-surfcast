@@ -25,6 +25,14 @@
     <!-- Bottom navigation -->
     <string name="nav_buoys">Buoys</string>
     <string name="nav_logs">Logs</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_units_header">Units</string>
+    <string name="settings_use_metric_title">Use metric units</string>
+    <string name="settings_use_metric_summary_on">Showing measurements in metric (°C, m, km/h)</string>
+    <string name="settings_use_metric_summary_off">Showing measurements in imperial (°F, ft, mph)</string>
 
     <!-- Log list -->
     <string name="log_list_title">Logs</string>
