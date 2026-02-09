@@ -1,12 +1,20 @@
 package org.opensurfcast.ui;
 
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.format.DateUtils;
+import android.text.style.ForegroundColorSpan;
+import android.text.style.RelativeSizeSpan;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.android.material.color.MaterialColors;
 
 import org.opensurfcast.R;
 import org.opensurfcast.buoy.BuoyStdMetData;
@@ -15,7 +23,6 @@ import org.opensurfcast.buoy.BuoyStation;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -108,43 +115,72 @@ public class BuoyListAdapter extends RecyclerView.Adapter<BuoyListAdapter.ViewHo
     static class ViewHolder extends RecyclerView.ViewHolder {
 
         private final TextView stationName;
-        private final TextView stationIdType;
-        private final TextView stationCoordinates;
+        private final LinearLayout supportingRow;
         private final TextView stationWaveSummary;
+        private final TextView observationAge;
 
         ViewHolder(@NonNull View itemView) {
             super(itemView);
             stationName = itemView.findViewById(R.id.station_name);
-            stationIdType = itemView.findViewById(R.id.station_id_type);
-            stationCoordinates = itemView.findViewById(R.id.station_coordinates);
+            supportingRow = itemView.findViewById(R.id.supporting_row);
             stationWaveSummary = itemView.findViewById(R.id.station_wave_summary);
+            observationAge = itemView.findViewById(R.id.observation_age);
         }
 
         void bind(BuoyStation station, BuoyStdMetData obs, boolean useMetric) {
-            stationName.setText(station.getName() != null ? station.getName() : station.getId());
+            // Build station name with ID suffix: "Station Name · 46025"
+            String name = station.getName() != null ? station.getName() : station.getId();
+            String suffix = " \u00B7 " + station.getId();
+            SpannableString spannable = new SpannableString(name + suffix);
+            int suffixStart = name.length();
+            int suffixEnd = spannable.length();
+            int variantColor = MaterialColors.getColor(itemView,
+                    com.google.android.material.R.attr.colorOnSurfaceVariant);
+            spannable.setSpan(new ForegroundColorSpan(variantColor),
+                    suffixStart, suffixEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            spannable.setSpan(new RelativeSizeSpan(0.85f),
+                    suffixStart, suffixEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            stationName.setText(spannable);
 
-            String type = station.getType() != null ? station.getType() : "";
-            stationIdType.setText(
-                    itemView.getContext().getString(R.string.station_id_type, station.getId(), type));
+            boolean hasWaveData = obs != null
+                    && obs.getWaveHeight() != null
+                    && obs.getDominantWavePeriod() != null;
+            boolean hasObservation = obs != null && obs.getEpochSeconds() > 0;
 
-            stationCoordinates.setText(
-                    String.format(Locale.US, "%.4f, %.4f",
-                            station.getLatitude(), station.getLongitude()));
+            if (hasWaveData || hasObservation) {
+                supportingRow.setVisibility(View.VISIBLE);
 
-            if (obs != null && obs.getWaveHeight() != null && obs.getDominantWavePeriod() != null) {
-                double waveHeight = obs.getWaveHeight();
-                if (!useMetric) {
-                    waveHeight *= METERS_TO_FEET;
+                // Wave summary
+                if (hasWaveData) {
+                    double waveHeight = obs.getWaveHeight();
+                    if (!useMetric) {
+                        waveHeight *= METERS_TO_FEET;
+                    }
+                    int summaryRes = useMetric
+                            ? R.string.buoy_wave_summary_metric
+                            : R.string.buoy_wave_summary_imperial;
+                    stationWaveSummary.setText(
+                            itemView.getContext().getString(summaryRes,
+                                    waveHeight, obs.getDominantWavePeriod()));
+                    stationWaveSummary.setVisibility(View.VISIBLE);
+                } else {
+                    stationWaveSummary.setVisibility(View.GONE);
                 }
-                int summaryRes = useMetric
-                        ? R.string.buoy_wave_summary_metric
-                        : R.string.buoy_wave_summary_imperial;
-                stationWaveSummary.setText(
-                        itemView.getContext().getString(summaryRes,
-                                waveHeight, obs.getDominantWavePeriod()));
-                stationWaveSummary.setVisibility(View.VISIBLE);
+
+                // Observation age
+                if (hasObservation) {
+                    long obsMillis = obs.getEpochSeconds() * 1000L;
+                    long nowMillis = System.currentTimeMillis();
+                    CharSequence relativeTime = DateUtils.getRelativeTimeSpanString(
+                            obsMillis, nowMillis, DateUtils.MINUTE_IN_MILLIS,
+                            DateUtils.FORMAT_ABBREV_RELATIVE);
+                    observationAge.setText(relativeTime);
+                    observationAge.setVisibility(View.VISIBLE);
+                } else {
+                    observationAge.setVisibility(View.GONE);
+                }
             } else {
-                stationWaveSummary.setVisibility(View.GONE);
+                supportingRow.setVisibility(View.GONE);
             }
         }
     }
