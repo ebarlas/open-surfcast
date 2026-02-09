@@ -5,9 +5,14 @@ import android.text.Spanned;
 import android.text.format.DateUtils;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.RelativeSizeSpan;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.Animation;
+import android.view.animation.DecelerateInterpolator;
+import android.view.animation.ScaleAnimation;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -31,6 +36,8 @@ import java.util.Map;
 public class BuoyListAdapter extends RecyclerView.Adapter<BuoyListAdapter.ViewHolder> {
 
     private static final double METERS_TO_FEET = 3.28084;
+    private static final double MAX_WAVE_HEIGHT_METERS = 6.0;
+    private static final long BAR_ANIM_DURATION_MS = 600;
 
     private final List<BuoyStation> stations = new ArrayList<>();
     private Map<String, BuoyStdMetData> observations = Collections.emptyMap();
@@ -118,6 +125,8 @@ public class BuoyListAdapter extends RecyclerView.Adapter<BuoyListAdapter.ViewHo
         private final LinearLayout supportingRow;
         private final TextView stationWaveSummary;
         private final TextView observationAge;
+        private final FrameLayout waveBarTrack;
+        private final View waveBarFill;
 
         ViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -125,6 +134,8 @@ public class BuoyListAdapter extends RecyclerView.Adapter<BuoyListAdapter.ViewHo
             supportingRow = itemView.findViewById(R.id.supporting_row);
             stationWaveSummary = itemView.findViewById(R.id.station_wave_summary);
             observationAge = itemView.findViewById(R.id.observation_age);
+            waveBarTrack = itemView.findViewById(R.id.wave_bar_track);
+            waveBarFill = itemView.findViewById(R.id.wave_bar_fill);
         }
 
         void bind(BuoyStation station, BuoyStdMetData obs, boolean useMetric) {
@@ -179,8 +190,47 @@ public class BuoyListAdapter extends RecyclerView.Adapter<BuoyListAdapter.ViewHo
                 } else {
                     observationAge.setVisibility(View.GONE);
                 }
+
+                // Wave height magnitude bar
+                if (hasWaveData) {
+                    waveBarTrack.setVisibility(View.VISIBLE);
+
+                    // Compute fill width as a fraction of the track's available width.
+                    // Use the parent (card inner LinearLayout) width minus horizontal
+                    // padding to determine the available track width, since the track
+                    // is match_parent inside that padded container.
+                    ViewGroup parent = (ViewGroup) waveBarTrack.getParent();
+                    int availableWidth = parent.getWidth() - parent.getPaddingStart()
+                            - parent.getPaddingEnd();
+                    double fraction = Math.min(obs.getWaveHeight() / MAX_WAVE_HEIGHT_METERS, 1.0);
+                    int targetWidth = Math.max(1, (int) (availableWidth * fraction));
+
+                    ViewGroup.LayoutParams fillParams = waveBarFill.getLayoutParams();
+                    fillParams.width = targetWidth;
+                    waveBarFill.setLayoutParams(fillParams);
+
+                    // Animate: scale X from 0 to 1, anchored at the left edge
+                    ScaleAnimation scaleAnim = new ScaleAnimation(
+                            0f, 1f, 1f, 1f,
+                            Animation.RELATIVE_TO_SELF, 0f,
+                            Animation.RELATIVE_TO_SELF, 0f);
+                    scaleAnim.setDuration(BAR_ANIM_DURATION_MS);
+                    scaleAnim.setInterpolator(new DecelerateInterpolator());
+                    waveBarFill.startAnimation(scaleAnim);
+                } else {
+                    waveBarTrack.setVisibility(View.GONE);
+                    waveBarFill.clearAnimation();
+                    ViewGroup.LayoutParams fillParams = waveBarFill.getLayoutParams();
+                    fillParams.width = 0;
+                    waveBarFill.setLayoutParams(fillParams);
+                }
             } else {
                 supportingRow.setVisibility(View.GONE);
+                waveBarTrack.setVisibility(View.GONE);
+                waveBarFill.clearAnimation();
+                ViewGroup.LayoutParams fillParams = waveBarFill.getLayoutParams();
+                fillParams.width = 0;
+                waveBarFill.setLayoutParams(fillParams);
             }
         }
     }

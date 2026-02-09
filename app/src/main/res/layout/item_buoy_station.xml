@@ -78,6 +78,23 @@
 
         </LinearLayout>
 
+        <!-- Row 3: Wave height magnitude bar -->
+        <FrameLayout
+            android:id="@+id/wave_bar_track"
+            android:layout_width="match_parent"
+            android:layout_height="6dp"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_wave_bar_track"
+            android:visibility="gone">
+
+            <View
+                android:id="@+id/wave_bar_fill"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:background="@drawable/bg_wave_bar_fill" />
+
+        </FrameLayout>
+
     </LinearLayout>
 
 </com.google.android.material.card.MaterialCardView>
