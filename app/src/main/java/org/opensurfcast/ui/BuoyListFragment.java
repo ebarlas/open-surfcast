@@ -95,6 +95,7 @@ public class BuoyListFragment extends Fragment {
 
         // RecyclerView setup
         adapter = new BuoyListAdapter();
+        adapter.setUseMetric(userPreferences.isMetric());
         recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         recyclerView.setAdapter(adapter);
 
@@ -125,6 +126,8 @@ public class BuoyListFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
+        // Re-apply unit preference (user may have changed it in settings)
+        adapter.setUseMetric(userPreferences.isMetric());
         // Refresh when returning from catalog (user may have added stations)
         loadPreferredStations();
     }

@@ -23,8 +23,11 @@ import java.util.Map;
  */
 public class BuoyListAdapter extends RecyclerView.Adapter<BuoyListAdapter.ViewHolder> {
 
+    private static final double METERS_TO_FEET = 3.28084;
+
     private final List<BuoyStation> stations = new ArrayList<>();
     private Map<String, BuoyStdMetData> observations = Collections.emptyMap();
+    private boolean useMetric;
 
     /**
      * Replaces the adapter data with the given list and refreshes the view.
@@ -45,6 +48,18 @@ public class BuoyListAdapter extends RecyclerView.Adapter<BuoyListAdapter.ViewHo
     public void submitObservations(Map<String, BuoyStdMetData> observations) {
         this.observations = observations != null ? observations : Collections.emptyMap();
         notifyDataSetChanged();
+    }
+
+    /**
+     * Sets the preferred unit system and refreshes the view.
+     *
+     * @param useMetric true for metric (m), false for imperial (ft)
+     */
+    public void setUseMetric(boolean useMetric) {
+        if (this.useMetric != useMetric) {
+            this.useMetric = useMetric;
+            notifyDataSetChanged();
+        }
     }
 
     /**
@@ -82,7 +97,7 @@ public class BuoyListAdapter extends RecyclerView.Adapter<BuoyListAdapter.ViewHo
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         BuoyStation station = stations.get(position);
         BuoyStdMetData obs = observations.get(station.getId());
-        holder.bind(station, obs);
+        holder.bind(station, obs, useMetric);
     }
 
     @Override
@@ -105,7 +120,7 @@ public class BuoyListAdapter extends RecyclerView.Adapter<BuoyListAdapter.ViewHo
             stationWaveSummary = itemView.findViewById(R.id.station_wave_summary);
         }
 
-        void bind(BuoyStation station, BuoyStdMetData obs) {
+        void bind(BuoyStation station, BuoyStdMetData obs, boolean useMetric) {
             stationName.setText(station.getName() != null ? station.getName() : station.getId());
 
             String type = station.getType() != null ? station.getType() : "";
@@ -117,9 +132,16 @@ public class BuoyListAdapter extends RecyclerView.Adapter<BuoyListAdapter.ViewHo
                             station.getLatitude(), station.getLongitude()));
 
             if (obs != null && obs.getWaveHeight() != null && obs.getDominantWavePeriod() != null) {
+                double waveHeight = obs.getWaveHeight();
+                if (!useMetric) {
+                    waveHeight *= METERS_TO_FEET;
+                }
+                int summaryRes = useMetric
+                        ? R.string.buoy_wave_summary_metric
+                        : R.string.buoy_wave_summary_imperial;
                 stationWaveSummary.setText(
-                        itemView.getContext().getString(R.string.buoy_wave_summary,
-                                obs.getWaveHeight(), obs.getDominantWavePeriod()));
+                        itemView.getContext().getString(summaryRes,
+                                waveHeight, obs.getDominantWavePeriod()));
                 stationWaveSummary.setVisibility(View.VISIBLE);
             } else {
                 stationWaveSummary.setVisibility(View.GONE);
