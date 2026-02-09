@@ -51,6 +51,7 @@ public class BuoyActivity extends AppCompatActivity {
     private SyncManager syncManager;
     private TaskScheduler taskScheduler;
     private ExecutorService executorService;
+    private ExecutorService dbExecutor;
 
     private BottomNavigationView bottomNavigation;
     private String currentTag = TAG_BUOYS;
@@ -136,6 +137,7 @@ public class BuoyActivity extends AppCompatActivity {
 
     private void initDependencies() {
         executorService = Executors.newFixedThreadPool(4);
+        dbExecutor = Executors.newSingleThreadExecutor();
         Handler mainHandler = new Handler(Looper.getMainLooper());
 
         dbHelper = new OpenSurfcastDbHelper(this);
@@ -148,7 +150,7 @@ public class BuoyActivity extends AppCompatActivity {
         CurrentPredictionDb currentPredictionDb = new CurrentPredictionDb(dbHelper);
 
         LogDb logDb = new LogDb(dbHelper);
-        asyncLogDb = new AsyncLogDb(logDb, executorService);
+        asyncLogDb = new AsyncLogDb(logDb, dbExecutor);
         Logger logger = new AppLogger(asyncLogDb);
 
         userPreferences = new UserPreferences(this);
@@ -214,6 +216,16 @@ public class BuoyActivity extends AppCompatActivity {
     }
 
     /**
+     * Returns the dedicated database executor for local DB queries.
+     * <p>
+     * Use this instead of {@link #getExecutorService()} for database operations
+     * to avoid being blocked by long-running network tasks.
+     */
+    public ExecutorService getDbExecutor() {
+        return dbExecutor;
+    }
+
+    /**
      * Navigates to the given fragment, adding to the back stack.
      */
     public void navigateTo(Fragment fragment) {
@@ -229,6 +241,9 @@ public class BuoyActivity extends AppCompatActivity {
         super.onDestroy();
         if (taskScheduler != null) {
             taskScheduler.shutdown();
+        }
+        if (dbExecutor != null) {
+            dbExecutor.shutdown();
         }
     }
 }

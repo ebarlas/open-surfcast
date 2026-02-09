@@ -15,6 +15,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.android.material.snackbar.Snackbar;
 
 import org.opensurfcast.BuoyActivity;
@@ -27,6 +28,7 @@ import org.opensurfcast.prefs.UserPreferences;
 import org.opensurfcast.sync.SyncManager;
 import org.opensurfcast.tasks.Task;
 import org.opensurfcast.tasks.TaskListener;
+import org.opensurfcast.tasks.TaskScheduler;
 
 import java.util.List;
 import java.util.Map;
@@ -44,29 +46,36 @@ public class BuoyListFragment extends Fragment {
     private RecyclerView recyclerView;
     private LinearLayout emptyState;
     private SwipeRefreshLayout swipeRefresh;
+    private LinearProgressIndicator syncProgress;
     private BuoyListAdapter adapter;
 
     private BuoyStationDb buoyStationDb;
     private BuoyStdMetDataDb buoyStdMetDataDb;
     private UserPreferences userPreferences;
     private SyncManager syncManager;
-    private ExecutorService executorService;
+    private ExecutorService dbExecutor;
 
     private final TaskListener taskListener = new TaskListener() {
         @Override
+        public void onTaskStarted(Task task) {
+            if (isBuoyTask(task)) {
+                showSyncProgress(true);
+            }
+        }
+
+        @Override
         public void onTaskCompleted(Task task) {
-            // Refresh list when any station fetch task completes
-            if (task.getKey().startsWith("FETCH_BUOY_STATIONS")
-                    || task.getKey().startsWith("FETCH_BUOY_STD_MET")
-                    || task.getKey().startsWith("FETCH_BUOY_SPEC_WAVE")) {
+            if (isBuoyTask(task)) {
                 loadPreferredStations();
-                swipeRefresh.setRefreshing(false);
+                updateSyncState();
             }
         }
 
         @Override
         public void onTaskFailed(Task task, Exception error) {
-            swipeRefresh.setRefreshing(false);
+            if (isBuoyTask(task)) {
+                updateSyncState();
+            }
         }
     };
 
@@ -86,11 +95,12 @@ public class BuoyListFragment extends Fragment {
         buoyStdMetDataDb = activity.getBuoyStdMetDataDb();
         userPreferences = activity.getUserPreferences();
         syncManager = activity.getSyncManager();
-        executorService = activity.getExecutorService();
+        dbExecutor = activity.getDbExecutor();
 
         recyclerView = view.findViewById(R.id.buoy_list);
         emptyState = view.findViewById(R.id.empty_state);
         swipeRefresh = view.findViewById(R.id.swipe_refresh);
+        syncProgress = view.findViewById(R.id.sync_progress);
         FloatingActionButton fab = view.findViewById(R.id.fab_add_buoy);
 
         // RecyclerView setup
@@ -118,6 +128,11 @@ public class BuoyListFragment extends Fragment {
 
         // Register task listener
         syncManager.getScheduler().addListener(taskListener);
+
+        // Show progress if sync tasks are already running
+        if (hasBuoyTasksRunning()) {
+            showSyncProgress(true);
+        }
 
         // Initial load
         loadPreferredStations();
@@ -150,7 +165,7 @@ public class BuoyListFragment extends Fragment {
             return;
         }
 
-        executorService.execute(() -> {
+        dbExecutor.execute(() -> {
             List<BuoyStation> stations = buoyStationDb.queryByIds(preferredIds);
             Map<String, BuoyStdMetData> latestObs =
                     buoyStdMetDataDb.queryLatestByStations(preferredIds);
@@ -167,6 +182,50 @@ public class BuoyListFragment extends Fragment {
     private void updateEmptyState(boolean empty) {
         emptyState.setVisibility(empty ? View.VISIBLE : View.GONE);
         recyclerView.setVisibility(empty ? View.GONE : View.VISIBLE);
+    }
+
+    /**
+     * Returns true if the given task is a buoy-related fetch task.
+     */
+    private boolean isBuoyTask(Task task) {
+        String key = task.getKey();
+        return key.startsWith("FETCH_BUOY_STATIONS")
+                || key.startsWith("FETCH_BUOY_STD_MET")
+                || key.startsWith("FETCH_BUOY_SPEC_WAVE");
+    }
+
+    /**
+     * Returns true if any buoy-related fetch tasks are currently running.
+     */
+    private boolean hasBuoyTasksRunning() {
+        TaskScheduler scheduler = syncManager.getScheduler();
+        for (String key : scheduler.getRunningTasks().keySet()) {
+            if (key.startsWith("FETCH_BUOY_STATIONS")
+                    || key.startsWith("FETCH_BUOY_STD_MET")
+                    || key.startsWith("FETCH_BUOY_SPEC_WAVE")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Shows or hides the sync progress indicator.
+     */
+    private void showSyncProgress(boolean show) {
+        syncProgress.setVisibility(show ? View.VISIBLE : View.GONE);
+    }
+
+    /**
+     * Updates the sync progress indicator and swipe-to-refresh state
+     * based on whether buoy tasks are still running.
+     */
+    private void updateSyncState() {
+        boolean running = hasBuoyTasksRunning();
+        showSyncProgress(running);
+        if (!running) {
+            swipeRefresh.setRefreshing(false);
+        }
     }
 
     /**

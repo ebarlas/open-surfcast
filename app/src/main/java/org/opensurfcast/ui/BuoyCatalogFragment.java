@@ -48,7 +48,7 @@ public class BuoyCatalogFragment extends Fragment {
     private BuoyStationDb buoyStationDb;
     private UserPreferences userPreferences;
     private SyncManager syncManager;
-    private ExecutorService executorService;
+    private ExecutorService dbExecutor;
 
     /** Full unfiltered list of all catalog stations. */
     private List<BuoyStation> allStations = new ArrayList<>();
@@ -78,7 +78,7 @@ public class BuoyCatalogFragment extends Fragment {
         buoyStationDb = activity.getBuoyStationDb();
         userPreferences = activity.getUserPreferences();
         syncManager = activity.getSyncManager();
-        executorService = activity.getExecutorService();
+        dbExecutor = activity.getDbExecutor();
 
         // Toolbar with back navigation
         MaterialToolbar toolbar = view.findViewById(R.id.toolbar);
@@ -140,7 +140,7 @@ public class BuoyCatalogFragment extends Fragment {
      * Loads all buoy stations from the database on a background thread.
      */
     private void loadCatalog() {
-        executorService.execute(() -> {
+        dbExecutor.execute(() -> {
             List<BuoyStation> stations = buoyStationDb.queryAll();
             if (isAdded()) {
                 requireActivity().runOnUiThread(() -> {
