@@ -20,6 +20,7 @@ import org.opensurfcast.db.LogDb;
 import org.opensurfcast.db.OpenSurfcastDbHelper;
 import org.opensurfcast.db.TidePredictionDb;
 import org.opensurfcast.db.TideStationDb;
+import org.opensurfcast.http.HttpCache;
 import org.opensurfcast.log.AppLogger;
 import org.opensurfcast.log.AsyncLogDb;
 import org.opensurfcast.log.Logger;
@@ -85,6 +86,7 @@ public class BuoyActivity extends AppCompatActivity {
         Logger logger = new AppLogger(asyncLogDb);
 
         userPreferences = new UserPreferences(this);
+        HttpCache httpCache = new HttpCache(this);
 
         TaskCooldowns cooldowns = new TaskCooldowns(this);
         taskScheduler = new TaskScheduler(executorService, mainHandler::post, cooldowns);
@@ -98,6 +100,7 @@ public class BuoyActivity extends AppCompatActivity {
                 buoySpecWaveDataDb,
                 tidePredictionDb,
                 currentPredictionDb,
+                httpCache,
                 logger
         );
     }
