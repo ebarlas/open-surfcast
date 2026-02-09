@@ -100,6 +100,10 @@
     <color name="md_theme_dark_inverseOnSurface">#2E3135</color>
     <color name="md_theme_dark_inversePrimary">#0D47A1</color>
 
+    <!-- Warning (amber) for log levels -->
+    <color name="log_warn_light">#F9A825</color>
+    <color name="log_warn_dark">#FFD54F</color>
+
     <!-- Utility (keep for layouts that reference directly) -->
     <color name="ocean_primary">#FF0D47A1</color>
     <color name="ocean_secondary">#FF00897B</color>

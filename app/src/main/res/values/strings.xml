@@ -20,4 +20,16 @@
     <!-- Station details -->
     <string name="station_id_type">%1$s \u00B7 %2$s</string>
     <string name="station_coordinates">%1$.4f, %2$.4f</string>
+
+    <!-- Bottom navigation -->
+    <string name="nav_buoys">Buoys</string>
+    <string name="nav_logs">Logs</string>
+
+    <!-- Log list -->
+    <string name="log_list_title">Logs</string>
+    <string name="empty_log_list">No log entries</string>
+    <string name="empty_log_list_hint">Logs will appear as the app runs</string>
+    <string name="clear_logs">Clear logs</string>
+    <string name="logs_cleared">Logs cleared</string>
+    <string name="filter_all">All</string>
 </resources>
