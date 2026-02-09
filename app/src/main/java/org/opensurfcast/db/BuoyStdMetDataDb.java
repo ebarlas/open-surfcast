@@ -6,8 +6,12 @@ import android.database.sqlite.SQLiteDatabase;
 
 import org.opensurfcast.buoy.BuoyStdMetData;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Database operations for buoy standard meteorological data.
@@ -82,6 +86,38 @@ public class BuoyStdMetDataDb {
                 null, null,
                 "id ASC, epoch_seconds ASC")) {
             return SqlUtils.map(cursor, this::fromCursor);
+        }
+    }
+
+    /**
+     * Returns the most recent observation for each of the given stations.
+     *
+     * @param stationIds the station IDs to query
+     * @return map of station ID to its latest observation; stations with no data are absent
+     */
+    public Map<String, BuoyStdMetData> queryLatestByStations(Collection<String> stationIds) {
+        if (stationIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<String> idList = new ArrayList<>(stationIds);
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+        String placeholders = SqlUtils.buildPlaceholders(idList.size());
+        try (Cursor cursor = db.query(
+                OpenSurfcastDbHelper.TABLE_BUOY_STD_MET_DATA,
+                null,
+                "id IN (" + placeholders + ") AND wave_height IS NOT NULL AND dominant_wave_period IS NOT NULL",
+                idList.toArray(new String[0]),
+                null, null,
+                "id ASC, epoch_seconds DESC")) {
+            Map<String, BuoyStdMetData> result = new HashMap<>();
+            int idIndex = cursor.getColumnIndexOrThrow("id");
+            while (cursor.moveToNext()) {
+                String id = cursor.getString(idIndex);
+                if (!result.containsKey(id)) {
+                    result.put(id, fromCursor(cursor));
+                }
+            }
+            return result;
         }
     }
 

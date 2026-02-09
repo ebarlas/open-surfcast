@@ -42,6 +42,15 @@
             android:textAppearance="?attr/textAppearanceBodySmall"
             android:textColor="?attr/colorOutline" />
 
+        <TextView
+            android:id="@+id/station_wave_summary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:textAppearance="?attr/textAppearanceBodyMedium"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:visibility="gone" />
+
     </LinearLayout>
 
 </com.google.android.material.card.MaterialCardView>

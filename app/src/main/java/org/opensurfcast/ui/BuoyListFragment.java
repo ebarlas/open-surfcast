@@ -19,14 +19,17 @@ import com.google.android.material.snackbar.Snackbar;
 
 import org.opensurfcast.BuoyActivity;
 import org.opensurfcast.R;
+import org.opensurfcast.buoy.BuoyStdMetData;
 import org.opensurfcast.buoy.BuoyStation;
 import org.opensurfcast.db.BuoyStationDb;
+import org.opensurfcast.db.BuoyStdMetDataDb;
 import org.opensurfcast.prefs.UserPreferences;
 import org.opensurfcast.sync.SyncManager;
 import org.opensurfcast.tasks.Task;
 import org.opensurfcast.tasks.TaskListener;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 
@@ -44,6 +47,7 @@ public class BuoyListFragment extends Fragment {
     private BuoyListAdapter adapter;
 
     private BuoyStationDb buoyStationDb;
+    private BuoyStdMetDataDb buoyStdMetDataDb;
     private UserPreferences userPreferences;
     private SyncManager syncManager;
     private ExecutorService executorService;
@@ -79,6 +83,7 @@ public class BuoyListFragment extends Fragment {
 
         BuoyActivity activity = (BuoyActivity) requireActivity();
         buoyStationDb = activity.getBuoyStationDb();
+        buoyStdMetDataDb = activity.getBuoyStdMetDataDb();
         userPreferences = activity.getUserPreferences();
         syncManager = activity.getSyncManager();
         executorService = activity.getExecutorService();
@@ -144,9 +149,12 @@ public class BuoyListFragment extends Fragment {
 
         executorService.execute(() -> {
             List<BuoyStation> stations = buoyStationDb.queryByIds(preferredIds);
+            Map<String, BuoyStdMetData> latestObs =
+                    buoyStdMetDataDb.queryLatestByStations(preferredIds);
             if (isAdded()) {
                 requireActivity().runOnUiThread(() -> {
                     adapter.submitList(stations);
+                    adapter.submitObservations(latestObs);
                     updateEmptyState(stations.isEmpty());
                 });
             }

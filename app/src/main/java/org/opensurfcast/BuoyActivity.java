@@ -43,6 +43,7 @@ public class BuoyActivity extends AppCompatActivity {
 
     private OpenSurfcastDbHelper dbHelper;
     private BuoyStationDb buoyStationDb;
+    private BuoyStdMetDataDb buoyStdMetDataDb;
     private AsyncLogDb asyncLogDb;
     private UserPreferences userPreferences;
     private SyncManager syncManager;
@@ -134,7 +135,7 @@ public class BuoyActivity extends AppCompatActivity {
         buoyStationDb = new BuoyStationDb(dbHelper);
         TideStationDb tideStationDb = new TideStationDb(dbHelper);
         CurrentStationDb currentStationDb = new CurrentStationDb(dbHelper);
-        BuoyStdMetDataDb buoyStdMetDataDb = new BuoyStdMetDataDb(dbHelper);
+        buoyStdMetDataDb = new BuoyStdMetDataDb(dbHelper);
         BuoySpecWaveDataDb buoySpecWaveDataDb = new BuoySpecWaveDataDb(dbHelper);
         TidePredictionDb tidePredictionDb = new TidePredictionDb(dbHelper);
         CurrentPredictionDb currentPredictionDb = new CurrentPredictionDb(dbHelper);
@@ -168,6 +169,13 @@ public class BuoyActivity extends AppCompatActivity {
      */
     public BuoyStationDb getBuoyStationDb() {
         return buoyStationDb;
+    }
+
+    /**
+     * Returns the buoy standard meteorological data database for use by fragments.
+     */
+    public BuoyStdMetDataDb getBuoyStdMetDataDb() {
+        return buoyStdMetDataDb;
     }
 
     /**

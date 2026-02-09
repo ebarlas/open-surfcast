@@ -20,6 +20,7 @@
     <!-- Station details -->
     <string name="station_id_type">%1$s \u00B7 %2$s</string>
     <string name="station_coordinates">%1$.4f, %2$.4f</string>
+    <string name="buoy_wave_summary">%1$.1f m @ %2$.0f s</string>
 
     <!-- Bottom navigation -->
     <string name="nav_buoys">Buoys</string>
