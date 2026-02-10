@@ -21,7 +21,6 @@ import java.util.List;
  * and skip redundant downloads.
  */
 public class FetchBuoyStdMetDataTask extends BaseTask {
-    private static final String KEY_PREFIX = "FETCH_BUOY_STD_MET_DATA:";
     private static final Duration COOLDOWN_PERIOD = Duration.ofMinutes(5);
 
     private final BuoyStdMetDataDb dataDb;
@@ -30,7 +29,7 @@ public class FetchBuoyStdMetDataTask extends BaseTask {
     private final Logger logger;
 
     public FetchBuoyStdMetDataTask(BuoyStdMetDataDb dataDb, String stationId, HttpCache httpCache, Logger logger) {
-        super(KEY_PREFIX + stationId, COOLDOWN_PERIOD);
+        super(COOLDOWN_PERIOD);
         this.dataDb = dataDb;
         this.stationId = stationId;
         this.httpCache = httpCache;
@@ -38,6 +37,11 @@ public class FetchBuoyStdMetDataTask extends BaseTask {
     }
 
     public String stationId() {
+        return stationId;
+    }
+
+    @Override
+    protected String getKeySuffix() {
         return stationId;
     }
 

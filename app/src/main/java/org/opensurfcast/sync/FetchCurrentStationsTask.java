@@ -17,14 +17,13 @@ import java.util.List;
  * Fetches all current prediction stations and updates the local database.
  */
 public class FetchCurrentStationsTask extends BaseTask {
-    private static final String KEY = "FETCH_CURRENT_STATIONS";
     private static final Duration COOLDOWN_PERIOD = Duration.ofHours(1);
 
     private final CurrentStationDb stationDb;
     private final Logger logger;
 
     public FetchCurrentStationsTask(CurrentStationDb stationDb, Logger logger) {
-        super(KEY, COOLDOWN_PERIOD);
+        super(COOLDOWN_PERIOD);
         this.stationDb = stationDb;
         this.logger = logger;
     }

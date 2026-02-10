@@ -36,24 +36,23 @@ public class TaskSchedulerTest {
 
     @Test
     public void submit_executesTask() throws InterruptedException {
-        TestTask task = new TestTask("test");
+        TestTask task = new TestTask();
         scheduler.submit(task);
         waitForCompletion();
 
         assertTrue(task.executed);
-        assertTrue(listener.startedKeys.contains("test"));
-        assertTrue(listener.completedKeys.contains("test"));
+        assertTrue(listener.startedKeys.contains("TestTask"));
+        assertTrue(listener.completedKeys.contains("TestTask"));
     }
 
     @Test
     public void submit_ignoresDuplicateKey() throws InterruptedException {
-        BlockingTask task1 = new BlockingTask("same-key");
-        TestTask task2 = new TestTask("same-key");
+        TestTask task1 = new TestTask();
+        TestTask task2 = new TestTask();
 
         scheduler.submit(task1);
-        scheduler.submit(task2); // Should be ignored
+        scheduler.submit(task2); // Same key, should be ignored
 
-        task1.unblock();
         waitForCompletion();
 
         assertTrue(task1.executed);
@@ -62,40 +61,40 @@ public class TaskSchedulerTest {
 
     @Test
     public void submit_ignoresTaskOnCooldown() throws InterruptedException {
-        cooldowns.onCooldownKeys.add("cooled");
-        TestTask task = new TestTask("cooled");
+        cooldowns.onCooldownKeys.add("TestTask");
+        TestTask task = new TestTask();
 
         scheduler.submit(task);
         waitForCompletion();
 
         assertFalse(task.executed);
-        assertFalse(listener.startedKeys.contains("cooled"));
+        assertFalse(listener.startedKeys.contains("TestTask"));
     }
 
     @Test
     public void submit_recordsCompletionOnSuccess() throws InterruptedException {
-        TestTask task = new TestTask("record-me");
+        TestTask task = new TestTask();
         scheduler.submit(task);
         waitForCompletion();
 
-        assertTrue(cooldowns.recordedKeys.contains("record-me"));
+        assertTrue(cooldowns.recordedKeys.contains("TestTask"));
     }
 
     @Test
     public void submit_notifiesFailureOnException() throws InterruptedException {
-        FailingTask task = new FailingTask("fail");
+        FailingTask task = new FailingTask();
         scheduler.submit(task);
         waitForCompletion();
 
-        assertTrue(listener.startedKeys.contains("fail"));
-        assertTrue(listener.failedKeys.contains("fail"));
-        assertFalse(listener.completedKeys.contains("fail"));
-        assertFalse(cooldowns.recordedKeys.contains("fail"));
+        assertTrue(listener.startedKeys.contains("FailingTask"));
+        assertTrue(listener.failedKeys.contains("FailingTask"));
+        assertFalse(listener.completedKeys.contains("FailingTask"));
+        assertFalse(cooldowns.recordedKeys.contains("FailingTask"));
     }
 
     @Test
     public void isRunning_returnsTrueWhileRunning() throws InterruptedException {
-        BlockingTask task = new BlockingTask("running");
+        BlockingTask task = new BlockingTask();
         scheduler.submit(task);
 
         Thread.sleep(50); // Let task start
@@ -115,8 +114,8 @@ public class TaskSchedulerTest {
     static class TestTask extends BaseTask {
         volatile boolean executed = false;
 
-        TestTask(String key) {
-            super(key, Duration.ZERO);
+        TestTask() {
+            super(Duration.ZERO);
         }
 
         @Override
@@ -130,8 +129,8 @@ public class TaskSchedulerTest {
         private final Object lock = new Object();
         private volatile boolean blocked = true;
 
-        BlockingTask(String key) {
-            super(key, Duration.ZERO);
+        BlockingTask() {
+            super(Duration.ZERO);
         }
 
         @Override
@@ -153,8 +152,8 @@ public class TaskSchedulerTest {
     }
 
     static class FailingTask extends BaseTask {
-        FailingTask(String key) {
-            super(key, Duration.ZERO);
+        FailingTask() {
+            super(Duration.ZERO);
         }
 
         @Override

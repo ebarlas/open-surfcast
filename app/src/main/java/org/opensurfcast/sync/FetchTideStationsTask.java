@@ -17,14 +17,13 @@ import java.util.List;
  * Fetches all tide prediction stations and updates the local database.
  */
 public class FetchTideStationsTask extends BaseTask {
-    private static final String KEY = "FETCH_TIDE_STATIONS";
     private static final Duration COOLDOWN_PERIOD = Duration.ofHours(1);
 
     private final TideStationDb stationDb;
     private final Logger logger;
 
     public FetchTideStationsTask(TideStationDb stationDb, Logger logger) {
-        super(KEY, COOLDOWN_PERIOD);
+        super(COOLDOWN_PERIOD);
         this.stationDb = stationDb;
         this.logger = logger;
     }

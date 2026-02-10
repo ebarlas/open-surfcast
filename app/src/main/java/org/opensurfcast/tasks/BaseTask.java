@@ -6,26 +6,37 @@ import java.time.Duration;
  * Abstract base class for all background tasks.
  * <p>
  * Provides common implementation for task metadata.
- * Subclasses implement the {@link #execute()} method to perform the actual work.
+ * The task key defaults to the class name plus an optional suffix from
+ * {@link #getKeySuffix()} (e.g. station ID). Subclasses implement
+ * {@link #execute()} to perform the actual work.
  */
 public abstract class BaseTask implements Task {
-    private final String key;
     private final Duration cooldownPeriod;
 
     /**
-     * Creates a new task.
+     * Creates a new task with a key derived from the class name and optional suffix.
      *
-     * @param key            unique key for deduplication and cooldown tracking
      * @param cooldownPeriod minimum time before task can run again
      */
-    protected BaseTask(String key, Duration cooldownPeriod) {
-        this.key = key;
+    protected BaseTask(Duration cooldownPeriod) {
         this.cooldownPeriod = cooldownPeriod;
+    }
+
+    /**
+     * Returns optional material to append to the class name in the key (e.g. station ID).
+     * Override in subclasses that need per-instance keys.
+     *
+     * @return suffix to append after a colon, or null for no suffix
+     */
+    protected String getKeySuffix() {
+        return null;
     }
 
     @Override
     public String getKey() {
-        return key;
+        String suffix = getKeySuffix();
+        return getClass().getSimpleName()
+                + (suffix != null && !suffix.isEmpty() ? ":" + suffix : "");
     }
 
     @Override

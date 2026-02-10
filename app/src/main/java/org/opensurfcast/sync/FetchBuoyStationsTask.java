@@ -22,7 +22,6 @@ import java.util.Set;
  * and skip redundant downloads.
  */
 public class FetchBuoyStationsTask extends BaseTask {
-    private static final String KEY = "FETCH_BUOY_STATIONS";
     private static final Duration COOLDOWN_PERIOD = Duration.ofHours(1);
 
     private final BuoyStationDb stationDb;
@@ -30,7 +29,7 @@ public class FetchBuoyStationsTask extends BaseTask {
     private final Logger logger;
 
     public FetchBuoyStationsTask(BuoyStationDb stationDb, HttpCache httpCache, Logger logger) {
-        super(KEY, COOLDOWN_PERIOD);
+        super(COOLDOWN_PERIOD);
         this.stationDb = stationDb;
         this.httpCache = httpCache;
         this.logger = logger;
@@ -39,7 +38,7 @@ public class FetchBuoyStationsTask extends BaseTask {
     @Override
     protected void execute() throws IOException {
         Timer timer = new Timer();
-        String lastModified = httpCache.get(KEY);
+        String lastModified = httpCache.get(getKey());
         Modified<List<BuoyStation>> result = NdbcNoaaGovService.fetchBuoyStations(lastModified);
         long elapsed = timer.elapsed();
         if (result == null) {
@@ -57,7 +56,7 @@ public class FetchBuoyStationsTask extends BaseTask {
             Timer t = new Timer();
             stationDb.replaceAll(retained);
             logger.info("Replaced " + retained.size() + " buoy stations (" + t.elapsed() + " ms)");
-            httpCache.put(KEY, result.lastModified());
+            httpCache.put(getKey(), result.lastModified());
         }
     }
 }

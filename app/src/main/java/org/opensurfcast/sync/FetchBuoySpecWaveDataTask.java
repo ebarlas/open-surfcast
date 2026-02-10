@@ -21,7 +21,6 @@ import java.util.List;
  * and skip redundant downloads.
  */
 public class FetchBuoySpecWaveDataTask extends BaseTask {
-    private static final String KEY_PREFIX = "FETCH_BUOY_SPEC_WAVE_DATA:";
     private static final Duration COOLDOWN_PERIOD = Duration.ofMinutes(5);
 
     private final BuoySpecWaveDataDb dataDb;
@@ -30,11 +29,16 @@ public class FetchBuoySpecWaveDataTask extends BaseTask {
     private final Logger logger;
 
     public FetchBuoySpecWaveDataTask(BuoySpecWaveDataDb dataDb, String stationId, HttpCache httpCache, Logger logger) {
-        super(KEY_PREFIX + stationId, COOLDOWN_PERIOD);
+        super(COOLDOWN_PERIOD);
         this.dataDb = dataDb;
         this.stationId = stationId;
         this.httpCache = httpCache;
         this.logger = logger;
+    }
+
+    @Override
+    protected String getKeySuffix() {
+        return stationId;
     }
 
     @Override

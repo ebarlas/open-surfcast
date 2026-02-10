@@ -20,7 +20,6 @@ import java.util.Locale;
  * Fetches predictions for the next 7 days and updates the local database.
  */
 public class FetchCurrentPredictionsTask extends BaseTask {
-    private static final String KEY_PREFIX = "FETCH_CURRENT_PREDICTIONS:";
     private static final Duration COOLDOWN_PERIOD = Duration.ofMinutes(5);
 
     private final CurrentPredictionDb dataDb;
@@ -28,10 +27,15 @@ public class FetchCurrentPredictionsTask extends BaseTask {
     private final Logger logger;
 
     public FetchCurrentPredictionsTask(CurrentPredictionDb dataDb, String stationId, Logger logger) {
-        super(KEY_PREFIX + stationId, COOLDOWN_PERIOD);
+        super(COOLDOWN_PERIOD);
         this.dataDb = dataDb;
         this.stationId = stationId;
         this.logger = logger;
+    }
+
+    @Override
+    protected String getKeySuffix() {
+        return stationId;
     }
 
     @Override
