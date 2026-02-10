@@ -47,7 +47,9 @@ public class FetchTidePredictionsTask extends BaseTask {
         List<TidePrediction> predictions = CoOpsNoaaGovService.fetchTidePredictions(
                 stationId, beginDate, endDate);
         long elapsed = timer.elapsed();
-        dataDb.replaceAllForStation(stationId, predictions);
         logger.info("Fetched " + predictions.size() + " tide predictions for station " + stationId + " (" + elapsed + "ms)");
+        Timer t = new Timer();
+        dataDb.replaceAllForStation(stationId, predictions);
+        logger.info("Replaced tide predictions for station " + stationId + " (" + t.elapsed() + " ms)");
     }
 }

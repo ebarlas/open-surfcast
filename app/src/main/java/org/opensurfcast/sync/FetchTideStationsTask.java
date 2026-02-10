@@ -34,7 +34,9 @@ public class FetchTideStationsTask extends BaseTask {
         Timer timer = new Timer();
         List<TideStation> stations = CoOpsNoaaGovService.fetchTideStations();
         long elapsed = timer.elapsed();
-        stationDb.replaceAll(stations);
         logger.info("Fetched " + stations.size() + " tide stations (" + elapsed + "ms)");
+        Timer t = new Timer();
+        stationDb.replaceAll(stations);
+        logger.info("Replaced " + stations.size() + " tide stations (" + t.elapsed() + " ms)");
     }
 }

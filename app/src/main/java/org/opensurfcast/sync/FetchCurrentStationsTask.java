@@ -34,7 +34,9 @@ public class FetchCurrentStationsTask extends BaseTask {
         Timer timer = new Timer();
         List<CurrentStation> stations = CoOpsNoaaGovService.fetchCurrentStations();
         long elapsed = timer.elapsed();
-        stationDb.replaceAll(stations);
         logger.info("Fetched " + stations.size() + " current stations (" + elapsed + "ms)");
+        Timer t = new Timer();
+        stationDb.replaceAll(stations);
+        logger.info("Replaced " + stations.size() + " current stations (" + t.elapsed() + " ms)");
     }
 }

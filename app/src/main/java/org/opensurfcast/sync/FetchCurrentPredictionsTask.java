@@ -47,7 +47,9 @@ public class FetchCurrentPredictionsTask extends BaseTask {
         List<CurrentPrediction> predictions = CoOpsNoaaGovService.fetchCurrentPredictions(
                 stationId, beginDate, endDate);
         long elapsed = timer.elapsed();
-        dataDb.replaceAllForStation(stationId, predictions);
         logger.info("Fetched " + predictions.size() + " current predictions for station " + stationId + " (" + elapsed + "ms)");
+        Timer t = new Timer();
+        dataDb.replaceAllForStation(stationId, predictions);
+        logger.info("Replaced current predictions for station " + stationId + " (" + t.elapsed() + " ms)");
     }
 }

@@ -53,9 +53,11 @@ public class FetchBuoyStationsTask extends BaseTask {
             List<BuoyStation> retained = stations.stream()
                     .filter(station -> ids.contains(station.getId()))
                     .toList();
-            stationDb.replaceAll(retained);
-            httpCache.put(KEY, result.lastModified());
             logger.info("Fetched " + stations.size() + " buoy stations and retained " + retained.size() + " (" + elapsed + "ms)");
+            Timer t = new Timer();
+            stationDb.replaceAll(retained);
+            logger.info("Replaced " + retained.size() + " buoy stations (" + t.elapsed() + " ms)");
+            httpCache.put(KEY, result.lastModified());
         }
     }
 }

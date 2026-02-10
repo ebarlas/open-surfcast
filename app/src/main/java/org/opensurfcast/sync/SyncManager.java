@@ -96,11 +96,7 @@ public class SyncManager {
      * @param prefs user preferences containing preferred station IDs
      */
     public void fetchPreferredStationData(UserPreferences prefs) {
-        // Fetch buoy data
-        for (String stationId : prefs.getPreferredBuoyStations()) {
-            scheduler.submit(new FetchBuoyStdMetDataTask(buoyStdMetDataDb, stationId, httpCache, logger));
-            scheduler.submit(new FetchBuoySpecWaveDataTask(buoySpecWaveDataDb, stationId, httpCache, logger));
-        }
+        fetchPreferredBuoyStationData(prefs);
 
         // Fetch tide predictions
         for (String stationId : prefs.getPreferredTideStations()) {
@@ -110,6 +106,13 @@ public class SyncManager {
         // Fetch current predictions
         for (String stationId : prefs.getPreferredCurrentStations()) {
             scheduler.submit(new FetchCurrentPredictionsTask(currentPredictionDb, stationId, logger));
+        }
+    }
+
+    public void fetchPreferredBuoyStationData(UserPreferences prefs) {
+        for (String stationId : prefs.getPreferredBuoyStations()) {
+            scheduler.submit(new FetchBuoyStdMetDataTask(buoyStdMetDataDb, stationId, httpCache, logger));
+            scheduler.submit(new FetchBuoySpecWaveDataTask(buoySpecWaveDataDb, stationId, httpCache, logger));
         }
     }
 }

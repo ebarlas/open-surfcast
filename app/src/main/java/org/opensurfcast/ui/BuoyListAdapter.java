@@ -5,7 +5,6 @@ import android.text.Spanned;
 import android.text.format.DateUtils;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.RelativeSizeSpan;
-import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -22,11 +21,11 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.color.MaterialColors;
 
 import org.opensurfcast.R;
-import org.opensurfcast.buoy.BuoyStdMetData;
 import org.opensurfcast.buoy.BuoyStation;
+import org.opensurfcast.buoy.BuoyStdMetData;
 
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -40,7 +39,7 @@ public class BuoyListAdapter extends RecyclerView.Adapter<BuoyListAdapter.ViewHo
     private static final long BAR_ANIM_DURATION_MS = 600;
 
     private final List<BuoyStation> stations = new ArrayList<>();
-    private Map<String, BuoyStdMetData> observations = Collections.emptyMap();
+    private final Map<String, BuoyStdMetData> observations = new HashMap<>();
     private boolean useMetric;
 
     /**
@@ -48,20 +47,69 @@ public class BuoyListAdapter extends RecyclerView.Adapter<BuoyListAdapter.ViewHo
      */
     public void submitList(List<BuoyStation> newStations) {
         stations.clear();
-        if (newStations != null) {
-            stations.addAll(newStations);
-        }
+        stations.addAll(newStations);
         notifyDataSetChanged();
     }
 
     /**
      * Sets the latest observation data for each station and refreshes the view.
      *
-     * @param observations map of station ID to its latest observation
+     * @param newObservations map of station ID to its latest observation
      */
-    public void submitObservations(Map<String, BuoyStdMetData> observations) {
-        this.observations = observations != null ? observations : Collections.emptyMap();
+    public void submitObservations(Map<String, BuoyStdMetData> newObservations) {
+        observations.clear();
+        observations.putAll(newObservations);
         notifyDataSetChanged();
+    }
+
+    /**
+     * Updates observations, only invalidating row tiles whose observation
+     * timestamp has actually changed. Rows with unchanged timestamps are
+     * left untouched, avoiding unnecessary rebinds and animation replays.
+     *
+     * @param newObservations map of station ID to its latest observation
+     */
+    public void updateObservations(Map<String, BuoyStdMetData> newObservations) {
+        for (int i = 0; i < stations.size(); i++) {
+            String id = stations.get(i).getId();
+            BuoyStdMetData prev = observations.get(id);
+            BuoyStdMetData next = newObservations.get(id);
+            if (requiresRefresh(prev, next)) {
+                notifyItemChanged(i);
+            }
+        }
+        observations.clear();
+        observations.putAll(newObservations);
+    }
+
+    public void updateObservations(String stationId, BuoyStdMetData latestObs) {
+        for (int i = 0; i < stations.size(); i++) {
+            String id = stations.get(i).getId();
+            if (id.equals(stationId)) {
+                BuoyStdMetData prev = observations.get(id);
+                if (requiresRefresh(prev, latestObs)) {
+                    notifyItemChanged(i);
+                    break;
+                }
+            }
+        }
+        observations.put(stationId, latestObs);
+    }
+
+    /**
+     * Returns {@code true} if the row tile for a station needs to be
+     * refreshed because its observation timestamp has changed.
+     * <p>
+     * Mirrors the pattern from the reference BuoyListActivity.
+     */
+    static boolean requiresRefresh(BuoyStdMetData prev, BuoyStdMetData next) {
+        if (prev == null && next == null) {
+            return false;
+        }
+        if (prev == null || next == null) {
+            return true;
+        }
+        return prev.getEpochSeconds() != next.getEpochSeconds();
     }
 
     /**
@@ -194,29 +242,38 @@ public class BuoyListAdapter extends RecyclerView.Adapter<BuoyListAdapter.ViewHo
                 // Wave height magnitude bar
                 if (hasWaveData) {
                     waveBarTrack.setVisibility(View.VISIBLE);
+                    waveBarFill.clearAnimation();
 
-                    // Compute fill width as a fraction of the track's available width.
-                    // Use the parent (card inner LinearLayout) width minus horizontal
-                    // padding to determine the available track width, since the track
-                    // is match_parent inside that padded container.
-                    ViewGroup parent = (ViewGroup) waveBarTrack.getParent();
-                    int availableWidth = parent.getWidth() - parent.getPaddingStart()
-                            - parent.getPaddingEnd();
-                    double fraction = Math.min(obs.getWaveHeight() / MAX_WAVE_HEIGHT_METERS, 1.0);
-                    int targetWidth = Math.max(1, (int) (availableWidth * fraction));
+                    // Defer width calculation until after layout so that
+                    // parent.getWidth() returns the real measured width.
+                    // Without this, the first bind after data appears would
+                    // see width == 0 and produce an invisible bar.
+                    double waveHeightM = obs.getWaveHeight();
+                    waveBarFill.post(() -> {
+                        ViewGroup parent = (ViewGroup) waveBarTrack.getParent();
+                        int availableWidth = parent.getWidth()
+                                - parent.getPaddingStart() - parent.getPaddingEnd();
+                        if (availableWidth <= 0) return;
 
-                    ViewGroup.LayoutParams fillParams = waveBarFill.getLayoutParams();
-                    fillParams.width = targetWidth;
-                    waveBarFill.setLayoutParams(fillParams);
+                        double fraction = Math.min(
+                                waveHeightM / MAX_WAVE_HEIGHT_METERS, 1.0);
+                        int targetWidth = Math.max(1,
+                                (int) (availableWidth * fraction));
 
-                    // Animate: scale X from 0 to 1, anchored at the left edge
-                    ScaleAnimation scaleAnim = new ScaleAnimation(
-                            0f, 1f, 1f, 1f,
-                            Animation.RELATIVE_TO_SELF, 0f,
-                            Animation.RELATIVE_TO_SELF, 0f);
-                    scaleAnim.setDuration(BAR_ANIM_DURATION_MS);
-                    scaleAnim.setInterpolator(new DecelerateInterpolator());
-                    waveBarFill.startAnimation(scaleAnim);
+                        ViewGroup.LayoutParams fillParams =
+                                waveBarFill.getLayoutParams();
+                        fillParams.width = targetWidth;
+                        waveBarFill.setLayoutParams(fillParams);
+
+                        // Animate: scale X from 0 to 1, anchored at the left edge
+                        ScaleAnimation scaleAnim = new ScaleAnimation(
+                                0f, 1f, 1f, 1f,
+                                Animation.RELATIVE_TO_SELF, 0f,
+                                Animation.RELATIVE_TO_SELF, 0f);
+                        scaleAnim.setDuration(BAR_ANIM_DURATION_MS);
+                        scaleAnim.setInterpolator(new DecelerateInterpolator());
+                        waveBarFill.startAnimation(scaleAnim);
+                    });
                 } else {
                     waveBarTrack.setVisibility(View.GONE);
                     waveBarFill.clearAnimation();

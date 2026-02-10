@@ -121,6 +121,29 @@ public class BuoyStdMetDataDb {
         }
     }
 
+    /**
+     * Returns the most recent observation for a single station.
+     *
+     * @param stationId the station ID to query
+     * @return the latest observation for the station, or null if no data exists
+     */
+    public BuoyStdMetData queryLatestByStation(String stationId) {
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+        try (Cursor cursor = db.query(
+                OpenSurfcastDbHelper.TABLE_BUOY_STD_MET_DATA,
+                null,
+                "id = ? AND wave_height IS NOT NULL AND dominant_wave_period IS NOT NULL",
+                new String[]{stationId},
+                null, null,
+                "epoch_seconds DESC",
+                "1")) {
+            if (cursor.moveToFirst()) {
+                return fromCursor(cursor);
+            }
+            return null;
+        }
+    }
+
     private ContentValues toContentValues(String stationId, BuoyStdMetData data) {
         ContentValues values = new ContentValues();
         values.put("id", stationId);

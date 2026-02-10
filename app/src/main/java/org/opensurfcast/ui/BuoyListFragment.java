@@ -25,6 +25,7 @@ import org.opensurfcast.buoy.BuoyStation;
 import org.opensurfcast.db.BuoyStationDb;
 import org.opensurfcast.db.BuoyStdMetDataDb;
 import org.opensurfcast.prefs.UserPreferences;
+import org.opensurfcast.sync.FetchBuoyStdMetDataTask;
 import org.opensurfcast.sync.SyncManager;
 import org.opensurfcast.tasks.Task;
 import org.opensurfcast.tasks.TaskListener;
@@ -66,7 +67,7 @@ public class BuoyListFragment extends Fragment {
         @Override
         public void onTaskCompleted(Task task) {
             if (isBuoyTask(task)) {
-                loadPreferredStations();
+                refreshObservations(task);
                 updateSyncState();
             }
         }
@@ -118,8 +119,12 @@ public class BuoyListFragment extends Fragment {
                 R.color.md_theme_light_primary,
                 R.color.md_theme_light_secondary);
         swipeRefresh.setOnRefreshListener(() -> {
-            syncManager.fetchAllStations();
             syncManager.fetchPreferredStationData(userPreferences);
+            // If all buoy tasks were rejected (on cooldown or already running),
+            // no callbacks will fire, so clear the refresh indicator immediately.
+            if (!hasBuoyTasksRunning()) {
+                swipeRefresh.setRefreshing(false);
+            }
         });
 
         // FAB -> catalog
@@ -133,9 +138,6 @@ public class BuoyListFragment extends Fragment {
         if (hasBuoyTasksRunning()) {
             showSyncProgress(true);
         }
-
-        // Initial load
-        loadPreferredStations();
     }
 
     @Override
@@ -175,6 +177,35 @@ public class BuoyListFragment extends Fragment {
                     adapter.submitObservations(latestObs);
                     updateEmptyState(stations.isEmpty());
                 });
+            }
+        });
+    }
+
+    /**
+     * Refreshes only the observation data for already-loaded stations.
+     * <p>
+     * Unlike {@link #loadPreferredStations()}, this does not re-query the
+     * station list. It queries the latest observations and uses the adapter's
+     * timestamp-aware {@link BuoyListAdapter#updateObservations} to only
+     * invalidate row tiles whose observation time has actually changed.
+     */
+    private void refreshObservations(Task task) {
+        if (!(task instanceof FetchBuoyStdMetDataTask)) {
+            return;
+        }
+
+        var stationId = ((FetchBuoyStdMetDataTask) task).stationId();
+
+        Set<String> preferredIds = userPreferences.getPreferredBuoyStations();
+        if (!preferredIds.contains(stationId)) {
+            return;
+        }
+
+        dbExecutor.execute(() -> {
+            BuoyStdMetData latestObs = buoyStdMetDataDb.queryLatestByStation(stationId);
+            if (isAdded()) {
+                requireActivity().runOnUiThread(() ->
+                        adapter.updateObservations(stationId, latestObs));
             }
         });
     }

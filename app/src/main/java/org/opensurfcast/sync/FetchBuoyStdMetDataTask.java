@@ -37,6 +37,10 @@ public class FetchBuoyStdMetDataTask extends BaseTask {
         this.logger = logger;
     }
 
+    public String stationId() {
+        return stationId;
+    }
+
     @Override
     protected void execute() throws IOException {
         Timer timer = new Timer();
@@ -49,9 +53,11 @@ public class FetchBuoyStdMetDataTask extends BaseTask {
         }
         if (result.value() != null) {
             List<BuoyStdMetData> data = result.value();
-            dataDb.replaceAllForStation(stationId, data);
-            httpCache.put(getKey(), result.lastModified());
             logger.info("Fetched " + data.size() + " std met observations for station " + stationId + " (" + elapsed + "ms)");
+            Timer t = new Timer();
+            dataDb.replaceAllForStation(stationId, data);
+            logger.info("Replaced std met observations for station " + stationId + " (" + t.elapsed() + " ms)");
+            httpCache.put(getKey(), result.lastModified());
         }
     }
 }

@@ -136,8 +136,8 @@ public class BuoyActivity extends AppCompatActivity {
     }
 
     private void initDependencies() {
-        executorService = Executors.newFixedThreadPool(4);
-        dbExecutor = Executors.newSingleThreadExecutor();
+        executorService = Executors.newFixedThreadPool(5);
+        dbExecutor = Executors.newFixedThreadPool(5);
         Handler mainHandler = new Handler(Looper.getMainLooper());
 
         dbHelper = new OpenSurfcastDbHelper(this);

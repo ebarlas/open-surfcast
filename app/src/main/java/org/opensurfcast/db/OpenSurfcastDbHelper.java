@@ -216,5 +216,6 @@ public class OpenSurfcastDbHelper extends SQLiteOpenHelper {
         super.onConfigure(db);
         // Enable foreign key constraints
         db.setForeignKeyConstraintsEnabled(true);
+        db.enableWriteAheadLogging();
     }
 }
