@@ -99,11 +99,11 @@ public class TaskSchedulerTest {
         scheduler.submit(task);
 
         Thread.sleep(50); // Let task start
-        assertTrue(scheduler.isRunning("running"));
+        assertTrue(scheduler.isRunning(task));
 
         task.unblock();
         waitForCompletion();
-        assertFalse(scheduler.isRunning("running"));
+        assertFalse(scheduler.isRunning(task));
     }
 
     private void waitForCompletion() throws InterruptedException {

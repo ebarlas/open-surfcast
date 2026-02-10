@@ -25,12 +25,15 @@ import org.opensurfcast.buoy.BuoyStation;
 import org.opensurfcast.db.BuoyStationDb;
 import org.opensurfcast.db.BuoyStdMetDataDb;
 import org.opensurfcast.prefs.UserPreferences;
+import org.opensurfcast.sync.FetchBuoySpecWaveDataTask;
+import org.opensurfcast.sync.FetchBuoyStationsTask;
 import org.opensurfcast.sync.FetchBuoyStdMetDataTask;
 import org.opensurfcast.sync.SyncManager;
 import org.opensurfcast.tasks.Task;
 import org.opensurfcast.tasks.TaskListener;
 import org.opensurfcast.tasks.TaskScheduler;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -219,10 +222,9 @@ public class BuoyListFragment extends Fragment {
      * Returns true if the given task is a buoy-related fetch task.
      */
     private boolean isBuoyTask(Task task) {
-        String key = task.getKey();
-        return key.startsWith("FETCH_BUOY_STATIONS")
-                || key.startsWith("FETCH_BUOY_STD_MET")
-                || key.startsWith("FETCH_BUOY_SPEC_WAVE");
+        return task instanceof FetchBuoyStationsTask
+                || task instanceof FetchBuoyStdMetDataTask
+                || task instanceof FetchBuoySpecWaveDataTask;
     }
 
     /**
@@ -230,10 +232,9 @@ public class BuoyListFragment extends Fragment {
      */
     private boolean hasBuoyTasksRunning() {
         TaskScheduler scheduler = syncManager.getScheduler();
-        for (String key : scheduler.getRunningTasks().keySet()) {
-            if (key.startsWith("FETCH_BUOY_STATIONS")
-                    || key.startsWith("FETCH_BUOY_STD_MET")
-                    || key.startsWith("FETCH_BUOY_SPEC_WAVE")) {
+        Collection<Task> running = scheduler.getRunningTasks();
+        for (Task task : running) {
+            if (isBuoyTask(task)) {
                 return true;
             }
         }

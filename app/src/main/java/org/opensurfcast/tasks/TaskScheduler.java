@@ -1,6 +1,7 @@
 package org.opensurfcast.tasks;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -96,26 +97,27 @@ public class TaskScheduler {
     }
 
     /**
-     * Returns currently running tasks.
+     * Returns the set of currently running tasks.
      * <p>
      * Must be called on the main thread.
+     * Task keys are opaque; use {@code instanceof} on returned tasks to identify types.
      *
-     * @return immutable copy of running tasks map
+     * @return immutable copy of running tasks
      */
-    public Map<String, Task> getRunningTasks() {
-        return new HashMap<>(runningTasks);
+    public Collection<Task> getRunningTasks() {
+        return new ArrayList<>(runningTasks.values());
     }
 
     /**
-     * Returns true if a specific task is currently running.
+     * Returns true if a task with the same key as the given task is currently running.
      * <p>
      * Must be called on the main thread.
      *
-     * @param taskKey the unique task key to check
-     * @return true if the task is running
+     * @param task the task to check (by key)
+     * @return true if a task with that key is running
      */
-    public boolean isRunning(String taskKey) {
-        return runningTasks.containsKey(taskKey);
+    public boolean isRunning(Task task) {
+        return runningTasks.containsKey(task.getKey());
     }
 
     /**
