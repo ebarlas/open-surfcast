@@ -152,6 +152,8 @@ public class BuoyListFragment extends Fragment {
         adapter.setUseMetric(userPreferences.isMetric());
         // Refresh when returning from catalog (user may have added stations)
         loadPreferredStations();
+        // Auto-fetch latest observations from the network
+        syncManager.fetchPreferredBuoyStationData(userPreferences);
     }
 
     @Override
