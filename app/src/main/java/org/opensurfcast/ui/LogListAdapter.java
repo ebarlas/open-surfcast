@@ -30,7 +30,7 @@ import java.util.Locale;
 public class LogListAdapter extends RecyclerView.Adapter<LogListAdapter.ViewHolder> {
 
     private static final SimpleDateFormat TIME_FORMAT =
-            new SimpleDateFormat("MMM dd, HH:mm:ss", Locale.US);
+            new SimpleDateFormat("MMM dd, HH:mm:ss.SSS", Locale.US);
 
     private final List<LogEntry> entries = new ArrayList<>();
 
