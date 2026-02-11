@@ -37,6 +37,7 @@ dependencies {
     implementation libs.androidx.recyclerview
     implementation libs.androidx.swiperefreshlayout
     implementation libs.material
+    implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'
     testImplementation libs.junit
     testImplementation libs.json
     androidTestImplementation libs.androidx.junit

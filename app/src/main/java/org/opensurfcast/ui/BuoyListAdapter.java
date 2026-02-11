@@ -1,5 +1,6 @@
 package org.opensurfcast.ui;
 
+import android.graphics.drawable.GradientDrawable;
 import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.format.DateUtils;
@@ -38,9 +39,24 @@ public class BuoyListAdapter extends RecyclerView.Adapter<BuoyListAdapter.ViewHo
     private static final double MAX_WAVE_HEIGHT_METERS = 6.0;
     private static final long BAR_ANIM_DURATION_MS = 600;
 
+    /**
+     * Callback for item click events.
+     */
+    public interface OnItemClickListener {
+        void onItemClick(BuoyStation station);
+    }
+
     private final List<BuoyStation> stations = new ArrayList<>();
     private final Map<String, BuoyStdMetData> observations = new HashMap<>();
     private boolean useMetric;
+    private OnItemClickListener itemClickListener;
+
+    /**
+     * Sets the listener for item click events.
+     */
+    public void setOnItemClickListener(OnItemClickListener listener) {
+        this.itemClickListener = listener;
+    }
 
     /**
      * Replaces the adapter data with the given list and refreshes the view.
@@ -160,6 +176,14 @@ public class BuoyListAdapter extends RecyclerView.Adapter<BuoyListAdapter.ViewHo
         BuoyStation station = stations.get(position);
         BuoyStdMetData obs = observations.get(station.getId());
         holder.bind(station, obs, useMetric);
+        holder.itemView.setOnClickListener(v -> {
+            if (itemClickListener != null) {
+                int adapterPosition = holder.getBindingAdapterPosition();
+                if (adapterPosition != RecyclerView.NO_POSITION) {
+                    itemClickListener.onItemClick(stations.get(adapterPosition));
+                }
+            }
+        });
     }
 
     @Override
@@ -184,6 +208,24 @@ public class BuoyListAdapter extends RecyclerView.Adapter<BuoyListAdapter.ViewHo
             observationAge = itemView.findViewById(R.id.observation_age);
             waveBarTrack = itemView.findViewById(R.id.wave_bar_track);
             waveBarFill = itemView.findViewById(R.id.wave_bar_fill);
+        }
+
+        /**
+         * Returns the appropriate color resource for the given dominant wave period.
+         * Color ranges represent wave conditions from calm to extreme.
+         */
+        private int getWavePeriodColor(double period) {
+            if (period < 10.0) {
+                return R.color.wave_period_calm;
+            } else if (period < 13.0) {
+                return R.color.wave_period_small;
+            } else if (period < 15.0) {
+                return R.color.wave_period_moderate;
+            } else if (period < 18.0) {
+                return R.color.wave_period_large;
+            } else {
+                return R.color.wave_period_extreme;
+            }
         }
 
         void bind(BuoyStation station, BuoyStdMetData obs, boolean useMetric) {
@@ -244,6 +286,11 @@ public class BuoyListAdapter extends RecyclerView.Adapter<BuoyListAdapter.ViewHo
                     waveBarTrack.setVisibility(View.VISIBLE);
                     waveBarFill.clearAnimation();
 
+                    // Get period-based color
+                    double period = obs.getDominantWavePeriod();
+                    int colorRes = getWavePeriodColor(period);
+                    int color = itemView.getContext().getColor(colorRes);
+
                     // Defer width calculation until after layout so that
                     // parent.getWidth() returns the real measured width.
                     // Without this, the first bind after data appears would
@@ -264,6 +311,13 @@ public class BuoyListAdapter extends RecyclerView.Adapter<BuoyListAdapter.ViewHo
                                 waveBarFill.getLayoutParams();
                         fillParams.width = targetWidth;
                         waveBarFill.setLayoutParams(fillParams);
+
+                        // Apply rounded corners with period-based color
+                        GradientDrawable shape = new GradientDrawable();
+                        shape.setShape(GradientDrawable.RECTANGLE);
+                        shape.setColor(color);
+                        shape.setCornerRadius(2f);
+                        waveBarFill.setBackground(shape);
 
                         // Animate: scale X from 0 to 1, anchored at the left edge
                         ScaleAnimation scaleAnim = new ScaleAnimation(

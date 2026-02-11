@@ -110,6 +110,8 @@ public class BuoyListFragment extends Fragment {
         // RecyclerView setup
         adapter = new BuoyListAdapter();
         adapter.setUseMetric(userPreferences.isMetric());
+        adapter.setOnItemClickListener(station ->
+                activity.navigateTo(BuoyDetailFragment.newInstance(station.getId())));
         recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         recyclerView.setAdapter(adapter);
 

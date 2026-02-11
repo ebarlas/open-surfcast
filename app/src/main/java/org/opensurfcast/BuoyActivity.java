@@ -46,6 +46,7 @@ public class BuoyActivity extends AppCompatActivity {
     private OpenSurfcastDbHelper dbHelper;
     private BuoyStationDb buoyStationDb;
     private BuoyStdMetDataDb buoyStdMetDataDb;
+    private BuoySpecWaveDataDb buoySpecWaveDataDb;
     private AsyncLogDb asyncLogDb;
     private UserPreferences userPreferences;
     private SyncManager syncManager;
@@ -145,7 +146,7 @@ public class BuoyActivity extends AppCompatActivity {
         TideStationDb tideStationDb = new TideStationDb(dbHelper);
         CurrentStationDb currentStationDb = new CurrentStationDb(dbHelper);
         buoyStdMetDataDb = new BuoyStdMetDataDb(dbHelper);
-        BuoySpecWaveDataDb buoySpecWaveDataDb = new BuoySpecWaveDataDb(dbHelper);
+        buoySpecWaveDataDb = new BuoySpecWaveDataDb(dbHelper);
         TidePredictionDb tidePredictionDb = new TidePredictionDb(dbHelper);
         CurrentPredictionDb currentPredictionDb = new CurrentPredictionDb(dbHelper);
 
@@ -185,6 +186,13 @@ public class BuoyActivity extends AppCompatActivity {
      */
     public BuoyStdMetDataDb getBuoyStdMetDataDb() {
         return buoyStdMetDataDb;
+    }
+
+    /**
+     * Returns the buoy spectral wave data database for use by fragments.
+     */
+    public BuoySpecWaveDataDb getBuoySpecWaveDataDb() {
+        return buoySpecWaveDataDb;
     }
 
     /**

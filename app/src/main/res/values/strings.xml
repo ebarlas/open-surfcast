@@ -23,6 +23,13 @@
     <string name="buoy_wave_summary_metric">%1$.1f m @ %2$.0f s</string>
     <string name="buoy_wave_summary_imperial">%1$.1f ft @ %2$.0f s</string>
 
+    <!-- Buoy detail -->
+    <string name="buoy_detail_title">Buoy Detail</string>
+    <string name="section_std_met">Standard Meteorological Data</string>
+    <string name="section_spec_wave">Spectral Wave Data</string>
+    <string name="loading_data">Loading data\u2026</string>
+    <string name="no_data_available">No data available for this station</string>
+
     <!-- Bottom navigation -->
     <string name="nav_buoys">Buoys</string>
     <string name="nav_logs">Logs</string>

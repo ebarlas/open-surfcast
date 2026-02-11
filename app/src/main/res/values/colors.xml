@@ -107,4 +107,11 @@
     <!-- Utility (keep for layouts that reference directly) -->
     <color name="ocean_primary">#FF0D47A1</color>
     <color name="ocean_secondary">#FF00897B</color>
+
+    <!-- Wave period bar colors (light theme) -->
+    <color name="wave_period_calm">#94A3B8</color>
+    <color name="wave_period_small">#60A5FA</color>
+    <color name="wave_period_moderate">#2563EB</color>
+    <color name="wave_period_large">#1E40AF</color>
+    <color name="wave_period_extreme">#0C2461</color>
 </resources>
