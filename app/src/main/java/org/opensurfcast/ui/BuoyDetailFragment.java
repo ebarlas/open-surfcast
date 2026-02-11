@@ -79,6 +79,9 @@ public class BuoyDetailFragment extends Fragment {
     private UserPreferences userPreferences;
     private ExecutorService dbExecutor;
 
+    /** Station ID kept as a field so tile click listeners can reference it. */
+    private String stationId;
+
     /**
      * Creates a new instance of BuoyDetailFragment for the given station.
      *
@@ -118,7 +121,7 @@ public class BuoyDetailFragment extends Fragment {
         loadingProgress = view.findViewById(R.id.loading_progress);
         metricContainer = view.findViewById(R.id.metric_container);
 
-        String stationId = requireArguments().getString(ARG_STATION_ID);
+        stationId = requireArguments().getString(ARG_STATION_ID);
         toolbar.setTitle(stationId);
 
         loadData(stationId);
@@ -175,17 +178,20 @@ public class BuoyDetailFragment extends Fragment {
                     if (d.getWaveHeight() == null) return null;
                     return useMetric ? d.getWaveHeight() : d.getWaveHeight() * METERS_TO_FEET;
                 },
-                BuoyStdMetData::getEpochSeconds, 0);
+                BuoyStdMetData::getEpochSeconds, 0,
+                ChartFullScreenFragment.METRIC_STD_WAVE_HEIGHT);
 
         // Dominant Wave Period
         addStdMetLineChart(dataList, "Dominant Wave Period", "s",
                 d -> d.getDominantWavePeriod() == null ? null : d.getDominantWavePeriod(),
-                BuoyStdMetData::getEpochSeconds, 0);
+                BuoyStdMetData::getEpochSeconds, 0,
+                ChartFullScreenFragment.METRIC_STD_DOM_WAVE_PERIOD);
 
         // Average Wave Period
         addStdMetLineChart(dataList, "Average Wave Period", "s",
                 d -> d.getAverageWavePeriod() == null ? null : d.getAverageWavePeriod(),
-                BuoyStdMetData::getEpochSeconds, 0);
+                BuoyStdMetData::getEpochSeconds, 0,
+                ChartFullScreenFragment.METRIC_STD_AVG_WAVE_PERIOD);
 
         // Wind Speed & Gust (dual-line chart)
         addWindSpeedGustChart(dataList, useMetric);
@@ -193,12 +199,14 @@ public class BuoyDetailFragment extends Fragment {
         // Wind Direction
         addStdMetLineChart(dataList, "Wind Direction", "°",
                 d -> d.getWindDirection() == null ? null : (double) d.getWindDirection(),
-                BuoyStdMetData::getEpochSeconds, 0);
+                BuoyStdMetData::getEpochSeconds, 0,
+                ChartFullScreenFragment.METRIC_STD_WIND_DIRECTION);
 
         // Mean Wave Direction
         addStdMetLineChart(dataList, "Mean Wave Direction", "°",
                 d -> d.getMeanWaveDirection() == null ? null : (double) d.getMeanWaveDirection(),
-                BuoyStdMetData::getEpochSeconds, 0);
+                BuoyStdMetData::getEpochSeconds, 0,
+                ChartFullScreenFragment.METRIC_STD_MEAN_WAVE_DIR);
 
         // Sea Level Pressure
         addStdMetLineChart(dataList, "Sea Level Pressure",
@@ -207,7 +215,8 @@ public class BuoyDetailFragment extends Fragment {
                     if (d.getPressure() == null) return null;
                     return useMetric ? d.getPressure() : d.getPressure() * HPA_TO_INHG;
                 },
-                BuoyStdMetData::getEpochSeconds, 0);
+                BuoyStdMetData::getEpochSeconds, 0,
+                ChartFullScreenFragment.METRIC_STD_PRESSURE);
 
         // Pressure Tendency (BarChart)
         addPressureTendencyChart(dataList, useMetric);
@@ -219,7 +228,8 @@ public class BuoyDetailFragment extends Fragment {
                     if (d.getAirTemperature() == null) return null;
                     return useMetric ? d.getAirTemperature() : celsiusToFahrenheit(d.getAirTemperature());
                 },
-                BuoyStdMetData::getEpochSeconds, 0);
+                BuoyStdMetData::getEpochSeconds, 0,
+                ChartFullScreenFragment.METRIC_STD_AIR_TEMP);
 
         // Water Temperature
         addStdMetLineChart(dataList, "Water Temperature",
@@ -228,7 +238,8 @@ public class BuoyDetailFragment extends Fragment {
                     if (d.getWaterTemperature() == null) return null;
                     return useMetric ? d.getWaterTemperature() : celsiusToFahrenheit(d.getWaterTemperature());
                 },
-                BuoyStdMetData::getEpochSeconds, 0);
+                BuoyStdMetData::getEpochSeconds, 0,
+                ChartFullScreenFragment.METRIC_STD_WATER_TEMP);
 
         // Dew Point
         addStdMetLineChart(dataList, "Dew Point",
@@ -237,12 +248,14 @@ public class BuoyDetailFragment extends Fragment {
                     if (d.getDewPoint() == null) return null;
                     return useMetric ? d.getDewPoint() : celsiusToFahrenheit(d.getDewPoint());
                 },
-                BuoyStdMetData::getEpochSeconds, 0);
+                BuoyStdMetData::getEpochSeconds, 0,
+                ChartFullScreenFragment.METRIC_STD_DEW_POINT);
 
         // Visibility (rarely reported)
         addStdMetLineChart(dataList, "Visibility", "nmi",
                 d -> d.getVisibility() == null ? null : d.getVisibility(),
-                BuoyStdMetData::getEpochSeconds, 0);
+                BuoyStdMetData::getEpochSeconds, 0,
+                ChartFullScreenFragment.METRIC_STD_VISIBILITY);
 
         // Tide (rarely reported; source data is in feet)
         addStdMetLineChart(dataList, "Tide",
@@ -251,7 +264,8 @@ public class BuoyDetailFragment extends Fragment {
                     if (d.getTide() == null) return null;
                     return useMetric ? d.getTide() * FEET_TO_METERS : d.getTide();
                 },
-                BuoyStdMetData::getEpochSeconds, 0);
+                BuoyStdMetData::getEpochSeconds, 0,
+                ChartFullScreenFragment.METRIC_STD_TIDE);
     }
 
     /**
@@ -261,7 +275,7 @@ public class BuoyDetailFragment extends Fragment {
     private void addStdMetLineChart(List<BuoyStdMetData> dataList, String title, String unit,
                                     Function<BuoyStdMetData, Double> valueExtractor,
                                     Function<BuoyStdMetData, Long> epochExtractor,
-                                    int colorIndex) {
+                                    int colorIndex, String metricKey) {
         List<Entry> entries = new ArrayList<>();
         Double latestValue = null;
 
@@ -276,7 +290,7 @@ public class BuoyDetailFragment extends Fragment {
         if (entries.isEmpty()) return;
 
         int color = getChartColor(colorIndex);
-        addLineChartTile(title, unit, latestValue, entries, color, null, null);
+        addLineChartTile(title, unit, latestValue, entries, color, null, null, metricKey);
     }
 
     /**
@@ -353,6 +367,7 @@ public class BuoyDetailFragment extends Fragment {
 
         cardContent.addView(chart);
         card.addView(cardContent);
+        setTileClickListener(card, ChartFullScreenFragment.METRIC_STD_WIND_SPEED_GUST);
         metricContainer.addView(card);
     }
 
@@ -413,6 +428,7 @@ public class BuoyDetailFragment extends Fragment {
 
         cardContent.addView(chart);
         card.addView(cardContent);
+        setTileClickListener(card, ChartFullScreenFragment.METRIC_STD_PRESSURE_TENDENCY);
         metricContainer.addView(card);
     }
 
@@ -432,12 +448,14 @@ public class BuoyDetailFragment extends Fragment {
                     if (d.getSwellHeight() == null) return null;
                     return useMetric ? d.getSwellHeight() : d.getSwellHeight() * METERS_TO_FEET;
                 },
-                BuoySpecWaveData::getEpochSeconds, 0);
+                BuoySpecWaveData::getEpochSeconds, 0,
+                ChartFullScreenFragment.METRIC_SPEC_SWELL_HEIGHT);
 
         // Swell Period
         addSpecWaveLineChart(dataList, "Swell Period", "s",
                 d -> d.getSwellPeriod() == null ? null : d.getSwellPeriod(),
-                BuoySpecWaveData::getEpochSeconds, 0);
+                BuoySpecWaveData::getEpochSeconds, 0,
+                ChartFullScreenFragment.METRIC_SPEC_SWELL_PERIOD);
 
         // Wind Wave Height
         addSpecWaveLineChart(dataList, "Wind Wave Height",
@@ -446,22 +464,26 @@ public class BuoyDetailFragment extends Fragment {
                     if (d.getWindWaveHeight() == null) return null;
                     return useMetric ? d.getWindWaveHeight() : d.getWindWaveHeight() * METERS_TO_FEET;
                 },
-                BuoySpecWaveData::getEpochSeconds, 0);
+                BuoySpecWaveData::getEpochSeconds, 0,
+                ChartFullScreenFragment.METRIC_SPEC_WIND_WAVE_HEIGHT);
 
         // Wind Wave Period
         addSpecWaveLineChart(dataList, "Wind Wave Period", "s",
                 d -> d.getWindWavePeriod() == null ? null : d.getWindWavePeriod(),
-                BuoySpecWaveData::getEpochSeconds, 0);
+                BuoySpecWaveData::getEpochSeconds, 0,
+                ChartFullScreenFragment.METRIC_SPEC_WIND_WAVE_PERIOD);
 
         // Average Wave Period
         addSpecWaveLineChart(dataList, "Average Wave Period", "s",
                 d -> d.getAverageWavePeriod() == null ? null : d.getAverageWavePeriod(),
-                BuoySpecWaveData::getEpochSeconds, 0);
+                BuoySpecWaveData::getEpochSeconds, 0,
+                ChartFullScreenFragment.METRIC_SPEC_AVG_WAVE_PERIOD);
 
         // Mean Wave Direction
         addSpecWaveLineChart(dataList, "Mean Wave Direction", "°",
                 d -> d.getMeanWaveDirection() == null ? null : (double) d.getMeanWaveDirection(),
-                BuoySpecWaveData::getEpochSeconds, 0);
+                BuoySpecWaveData::getEpochSeconds, 0,
+                ChartFullScreenFragment.METRIC_SPEC_MEAN_WAVE_DIR);
 
         // Steepness (categorical → stepped line chart)
         addSteepnessChart(dataList);
@@ -479,7 +501,7 @@ public class BuoyDetailFragment extends Fragment {
     private void addSpecWaveLineChart(List<BuoySpecWaveData> dataList, String title, String unit,
                                       Function<BuoySpecWaveData, Double> valueExtractor,
                                       Function<BuoySpecWaveData, Long> epochExtractor,
-                                      int colorIndex) {
+                                      int colorIndex, String metricKey) {
         List<Entry> entries = new ArrayList<>();
         Double latestValue = null;
 
@@ -494,7 +516,7 @@ public class BuoyDetailFragment extends Fragment {
         if (entries.isEmpty()) return;
 
         int color = getChartColor(colorIndex);
-        addLineChartTile(title, unit, latestValue, entries, color, null, null);
+        addLineChartTile(title, unit, latestValue, entries, color, null, null, metricKey);
     }
 
     /**
@@ -630,6 +652,7 @@ public class BuoyDetailFragment extends Fragment {
 
         cardContent.addView(chart);
         card.addView(cardContent);
+        setTileClickListener(card, ChartFullScreenFragment.METRIC_SPEC_STEEPNESS);
         metricContainer.addView(card);
     }
 
@@ -642,7 +665,7 @@ public class BuoyDetailFragment extends Fragment {
         dataSet.setScatterShapeSize(16f);
         dataSet.setColor(color);
         dataSet.setDrawValues(false);
-        dataSet.setHighLightColor(color);
+        dataSet.setHighLightColor(resolveColor(com.google.android.material.R.attr.colorTertiary));
         return dataSet;
     }
 
@@ -677,11 +700,14 @@ public class BuoyDetailFragment extends Fragment {
     /**
      * Adds a complete LineChart tile (card + title + value + chart) to the container.
      * Optionally supports a second dataset for dual-line charts.
+     *
+     * @param metricKey the metric key used to open the full-screen chart on tap
      */
     private void addLineChartTile(String title, String unit, Double latestValue,
                                   List<Entry> entries, int lineColor,
                                   @Nullable List<Entry> secondEntries,
-                                  @Nullable Integer secondColor) {
+                                  @Nullable Integer secondColor,
+                                  String metricKey) {
         MaterialCardView card = createTileCard();
         LinearLayout cardContent = createCardContent();
 
@@ -707,6 +733,7 @@ public class BuoyDetailFragment extends Fragment {
 
         cardContent.addView(chart);
         card.addView(cardContent);
+        setTileClickListener(card, metricKey);
         metricContainer.addView(card);
     }
 
@@ -745,6 +772,19 @@ public class BuoyDetailFragment extends Fragment {
         empty.setLayoutParams(params);
 
         metricContainer.addView(empty);
+    }
+
+    /**
+     * Configures a tile card to open the full-screen chart when tapped.
+     */
+    private void setTileClickListener(MaterialCardView card, String metricKey) {
+        card.setClickable(true);
+        card.setFocusable(true);
+        card.setOnClickListener(v -> {
+            ChartFullScreenFragment fragment =
+                    ChartFullScreenFragment.newInstance(stationId, metricKey);
+            ((BuoyActivity) requireActivity()).navigateTo(fragment);
+        });
     }
 
     /**
@@ -888,7 +928,7 @@ public class BuoyDetailFragment extends Fragment {
         dataSet.setFillColor(fillColor);
         dataSet.setFillAlpha(255); // alpha is baked into fillColor
 
-        dataSet.setHighLightColor(color);
+        dataSet.setHighLightColor(resolveColor(com.google.android.material.R.attr.colorTertiary));
         dataSet.setHighlightLineWidth(1f);
         dataSet.setDrawHorizontalHighlightIndicator(false);
 

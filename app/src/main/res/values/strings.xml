@@ -30,6 +30,11 @@
     <string name="loading_data">Loading data\u2026</string>
     <string name="no_data_available">No data available for this station</string>
 
+    <!-- Chart full-screen -->
+    <string name="chart_fullscreen_lookback_label">Look Back</string>
+    <string name="chart_fullscreen_lookback_days">%d days</string>
+    <string name="chart_fullscreen_reset_zoom">Reset Zoom</string>
+
     <!-- Bottom navigation -->
     <string name="nav_buoys">Buoys</string>
     <string name="nav_logs">Logs</string>
