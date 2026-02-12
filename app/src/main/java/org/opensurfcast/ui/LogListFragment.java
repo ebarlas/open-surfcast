@@ -18,7 +18,7 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.snackbar.Snackbar;
 
-import org.opensurfcast.BuoyActivity;
+import org.opensurfcast.MainActivity;
 import org.opensurfcast.R;
 import org.opensurfcast.log.AsyncLogDb;
 import org.opensurfcast.log.LogEntry;
@@ -57,7 +57,7 @@ public class LogListFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        BuoyActivity activity = (BuoyActivity) requireActivity();
+        MainActivity activity = (MainActivity) requireActivity();
         asyncLogDb = activity.getAsyncLogDb();
 
         recyclerView = view.findViewById(R.id.log_list);

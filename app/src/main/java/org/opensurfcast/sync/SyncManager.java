@@ -77,6 +77,15 @@ public class SyncManager {
     }
 
     /**
+     * Fetches the tide station catalog only.
+     * <p>
+     * Use for pull-to-refresh on the tide list without fetching buoy/current catalogs.
+     */
+    public void fetchTideStationsOnly() {
+        scheduler.submit(new FetchTideStationsTask(tideStationDb, logger));
+    }
+
+    /**
      * Fetches all station catalogs.
      * <p>
      * Submits tasks to fetch buoy, tide, and current station catalogs.

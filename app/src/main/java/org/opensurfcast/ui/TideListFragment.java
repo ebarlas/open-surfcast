@@ -20,41 +20,35 @@ import com.google.android.material.snackbar.Snackbar;
 
 import org.opensurfcast.MainActivity;
 import org.opensurfcast.R;
-import org.opensurfcast.buoy.BuoyStdMetData;
-import org.opensurfcast.buoy.BuoyStation;
-import org.opensurfcast.db.BuoyStationDb;
-import org.opensurfcast.db.BuoyStdMetDataDb;
+import org.opensurfcast.db.TideStationDb;
 import org.opensurfcast.prefs.UserPreferences;
-import org.opensurfcast.sync.FetchBuoySpecWaveDataTask;
-import org.opensurfcast.sync.FetchBuoyStationsTask;
-import org.opensurfcast.sync.FetchBuoyStdMetDataTask;
+import org.opensurfcast.sync.FetchTideStationsTask;
 import org.opensurfcast.sync.SyncManager;
 import org.opensurfcast.tasks.Task;
 import org.opensurfcast.tasks.TaskListener;
 import org.opensurfcast.tasks.TaskScheduler;
+import org.opensurfcast.tide.TideStation;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 
 /**
- * Fragment displaying the user's preferred buoy stations.
+ * Fragment displaying the user's preferred tide stations.
  * <p>
  * Provides swipe-to-delete with undo, pull-to-refresh, and a FAB
- * to navigate to the buoy catalog.
+ * to navigate to the tide catalog. No tide predictions are displayed.
  */
-public class BuoyListFragment extends Fragment {
+public class TideListFragment extends Fragment {
 
     private RecyclerView recyclerView;
     private LinearLayout emptyState;
     private SwipeRefreshLayout swipeRefresh;
     private LinearProgressIndicator syncProgress;
-    private BuoyListAdapter adapter;
+    private TideListAdapter adapter;
 
-    private BuoyStationDb buoyStationDb;
-    private BuoyStdMetDataDb buoyStdMetDataDb;
+    private TideStationDb tideStationDb;
     private UserPreferences userPreferences;
     private SyncManager syncManager;
     private ExecutorService dbExecutor;
@@ -62,22 +56,22 @@ public class BuoyListFragment extends Fragment {
     private final TaskListener taskListener = new TaskListener() {
         @Override
         public void onTaskStarted(Task task) {
-            if (isBuoyTask(task)) {
+            if (task instanceof FetchTideStationsTask) {
                 showSyncProgress(true);
             }
         }
 
         @Override
         public void onTaskCompleted(Task task) {
-            if (isBuoyTask(task)) {
-                refreshObservations(task);
+            if (task instanceof FetchTideStationsTask) {
+                loadPreferredStations();
                 updateSyncState();
             }
         }
 
         @Override
         public void onTaskFailed(Task task, Exception error) {
-            if (isBuoyTask(task)) {
+            if (task instanceof FetchTideStationsTask) {
                 updateSyncState();
             }
         }
@@ -87,7 +81,7 @@ public class BuoyListFragment extends Fragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.fragment_buoy_list, container, false);
+        return inflater.inflate(R.layout.fragment_tide_list, container, false);
     }
 
     @Override
@@ -95,23 +89,19 @@ public class BuoyListFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         MainActivity activity = (MainActivity) requireActivity();
-        buoyStationDb = activity.getBuoyStationDb();
-        buoyStdMetDataDb = activity.getBuoyStdMetDataDb();
+        tideStationDb = activity.getTideStationDb();
         userPreferences = activity.getUserPreferences();
         syncManager = activity.getSyncManager();
         dbExecutor = activity.getDbExecutor();
 
-        recyclerView = view.findViewById(R.id.buoy_list);
+        recyclerView = view.findViewById(R.id.tide_list);
         emptyState = view.findViewById(R.id.empty_state);
         swipeRefresh = view.findViewById(R.id.swipe_refresh);
         syncProgress = view.findViewById(R.id.sync_progress);
-        FloatingActionButton fab = view.findViewById(R.id.fab_add_buoy);
+        FloatingActionButton fab = view.findViewById(R.id.fab_add_tide);
 
         // RecyclerView setup
-        adapter = new BuoyListAdapter();
-        adapter.setUseMetric(userPreferences.isMetric());
-        adapter.setOnItemClickListener(station ->
-                activity.navigateTo(BuoyDetailFragment.newInstance(station.getId())));
+        adapter = new TideListAdapter();
         recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         recyclerView.setAdapter(adapter);
 
@@ -119,28 +109,25 @@ public class BuoyListFragment extends Fragment {
         ItemTouchHelper touchHelper = new ItemTouchHelper(new SwipeToDeleteCallback());
         touchHelper.attachToRecyclerView(recyclerView);
 
-        // Pull-to-refresh
+        // Pull-to-refresh: sync tide station catalog only (no predictions)
         swipeRefresh.setColorSchemeResources(
                 R.color.md_theme_light_primary,
                 R.color.md_theme_light_secondary);
         swipeRefresh.setOnRefreshListener(() -> {
-            syncManager.fetchPreferredStationData(userPreferences);
-            // If all buoy tasks were rejected (on cooldown or already running),
-            // no callbacks will fire, so clear the refresh indicator immediately.
-            if (!hasBuoyTasksRunning()) {
+            syncManager.fetchTideStationsOnly();
+            if (!hasTideTasksRunning()) {
                 swipeRefresh.setRefreshing(false);
             }
         });
 
         // FAB -> catalog
         fab.setOnClickListener(v ->
-                activity.navigateTo(new BuoyCatalogFragment()));
+                activity.navigateTo(new TideCatalogFragment()));
 
         // Register task listener
         syncManager.getScheduler().addListener(taskListener);
 
-        // Show progress if sync tasks are already running
-        if (hasBuoyTasksRunning()) {
+        if (hasTideTasksRunning()) {
             showSyncProgress(true);
         }
     }
@@ -148,12 +135,7 @@ public class BuoyListFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        // Re-apply unit preference (user may have changed it in settings)
-        adapter.setUseMetric(userPreferences.isMetric());
-        // Refresh when returning from catalog (user may have added stations)
         loadPreferredStations();
-        // Auto-fetch latest observations from the network
-        syncManager.fetchPreferredBuoyStationData(userPreferences);
     }
 
     @Override
@@ -163,11 +145,11 @@ public class BuoyListFragment extends Fragment {
     }
 
     /**
-     * Loads the preferred buoy stations from the database on a background thread
+     * Loads the preferred tide stations from the database on a background thread
      * and updates the UI on the main thread.
      */
     private void loadPreferredStations() {
-        Set<String> preferredIds = userPreferences.getPreferredBuoyStations();
+        Set<String> preferredIds = userPreferences.getPreferredTideStations();
         if (preferredIds.isEmpty()) {
             updateEmptyState(true);
             adapter.submitList(null);
@@ -175,44 +157,12 @@ public class BuoyListFragment extends Fragment {
         }
 
         dbExecutor.execute(() -> {
-            List<BuoyStation> stations = buoyStationDb.queryByIds(preferredIds);
-            Map<String, BuoyStdMetData> latestObs =
-                    buoyStdMetDataDb.queryLatestByStations(preferredIds);
+            List<TideStation> stations = tideStationDb.queryByIds(preferredIds);
             if (isAdded()) {
                 requireActivity().runOnUiThread(() -> {
                     adapter.submitList(stations);
-                    adapter.submitObservations(latestObs);
                     updateEmptyState(stations.isEmpty());
                 });
-            }
-        });
-    }
-
-    /**
-     * Refreshes only the observation data for already-loaded stations.
-     * <p>
-     * Unlike {@link #loadPreferredStations()}, this does not re-query the
-     * station list. It queries the latest observations and uses the adapter's
-     * timestamp-aware {@link BuoyListAdapter#updateObservations} to only
-     * invalidate row tiles whose observation time has actually changed.
-     */
-    private void refreshObservations(Task task) {
-        if (!(task instanceof FetchBuoyStdMetDataTask)) {
-            return;
-        }
-
-        var stationId = ((FetchBuoyStdMetDataTask) task).stationId();
-
-        Set<String> preferredIds = userPreferences.getPreferredBuoyStations();
-        if (!preferredIds.contains(stationId)) {
-            return;
-        }
-
-        dbExecutor.execute(() -> {
-            BuoyStdMetData latestObs = buoyStdMetDataDb.queryLatestByStation(stationId);
-            if (isAdded()) {
-                requireActivity().runOnUiThread(() ->
-                        adapter.updateObservations(stationId, latestObs));
             }
         });
     }
@@ -222,42 +172,23 @@ public class BuoyListFragment extends Fragment {
         recyclerView.setVisibility(empty ? View.GONE : View.VISIBLE);
     }
 
-    /**
-     * Returns true if the given task is a buoy-related fetch task.
-     */
-    private boolean isBuoyTask(Task task) {
-        return task instanceof FetchBuoyStationsTask
-                || task instanceof FetchBuoyStdMetDataTask
-                || task instanceof FetchBuoySpecWaveDataTask;
-    }
-
-    /**
-     * Returns true if any buoy-related fetch tasks are currently running.
-     */
-    private boolean hasBuoyTasksRunning() {
+    private boolean hasTideTasksRunning() {
         TaskScheduler scheduler = syncManager.getScheduler();
         Collection<Task> running = scheduler.getRunningTasks();
         for (Task task : running) {
-            if (isBuoyTask(task)) {
+            if (task instanceof FetchTideStationsTask) {
                 return true;
             }
         }
         return false;
     }
 
-    /**
-     * Shows or hides the sync progress indicator.
-     */
     private void showSyncProgress(boolean show) {
         syncProgress.setVisibility(show ? View.VISIBLE : View.GONE);
     }
 
-    /**
-     * Updates the sync progress indicator and swipe-to-refresh state
-     * based on whether buoy tasks are still running.
-     */
     private void updateSyncState() {
-        boolean running = hasBuoyTasksRunning();
+        boolean running = hasTideTasksRunning();
         showSyncProgress(running);
         if (!running) {
             swipeRefresh.setRefreshing(false);
@@ -283,14 +214,14 @@ public class BuoyListFragment extends Fragment {
         @Override
         public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
             int position = viewHolder.getBindingAdapterPosition();
-            BuoyStation removed = adapter.getStationAt(position);
+            TideStation removed = adapter.getStationAt(position);
             adapter.removeAt(position);
-            userPreferences.removePreferredBuoyStation(removed.getId());
+            userPreferences.removePreferredTideStation(removed.id);
             updateEmptyState(adapter.getItemCount() == 0);
 
             Snackbar.make(requireView(), R.string.station_removed, Snackbar.LENGTH_LONG)
                     .setAction(R.string.undo, v -> {
-                        userPreferences.addPreferredBuoyStation(removed.getId());
+                        userPreferences.addPreferredTideStation(removed.id);
                         adapter.insertAt(position, removed);
                         updateEmptyState(false);
                     })

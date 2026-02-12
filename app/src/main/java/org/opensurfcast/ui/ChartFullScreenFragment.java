@@ -34,7 +34,7 @@ import com.google.android.material.color.MaterialColors;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.android.material.slider.Slider;
 
-import org.opensurfcast.BuoyActivity;
+import org.opensurfcast.MainActivity;
 import org.opensurfcast.R;
 import org.opensurfcast.buoy.BuoySpecWaveData;
 import org.opensurfcast.buoy.BuoyStdMetData;
@@ -152,7 +152,7 @@ public class ChartFullScreenFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        BuoyActivity activity = (BuoyActivity) requireActivity();
+        MainActivity activity = (MainActivity) requireActivity();
         buoyStdMetDataDb = activity.getBuoyStdMetDataDb();
         buoySpecWaveDataDb = activity.getBuoySpecWaveDataDb();
         userPreferences = activity.getUserPreferences();

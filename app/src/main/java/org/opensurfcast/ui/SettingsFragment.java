@@ -13,7 +13,7 @@ import androidx.fragment.app.Fragment;
 
 import com.google.android.material.materialswitch.MaterialSwitch;
 
-import org.opensurfcast.BuoyActivity;
+import org.opensurfcast.MainActivity;
 import org.opensurfcast.R;
 import org.opensurfcast.prefs.UserPreferences;
 
@@ -41,7 +41,7 @@ public class SettingsFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        BuoyActivity activity = (BuoyActivity) requireActivity();
+        MainActivity activity = (MainActivity) requireActivity();
         userPreferences = activity.getUserPreferences();
 
         metricSwitch = view.findViewById(R.id.switch_use_metric);

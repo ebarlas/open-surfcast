@@ -37,7 +37,7 @@ import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.color.MaterialColors;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 
-import org.opensurfcast.BuoyActivity;
+import org.opensurfcast.MainActivity;
 import org.opensurfcast.R;
 import org.opensurfcast.buoy.BuoySpecWaveData;
 import org.opensurfcast.buoy.BuoyStation;
@@ -107,7 +107,7 @@ public class BuoyDetailFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        BuoyActivity activity = (BuoyActivity) requireActivity();
+        MainActivity activity = (MainActivity) requireActivity();
         buoyStationDb = activity.getBuoyStationDb();
         buoyStdMetDataDb = activity.getBuoyStdMetDataDb();
         buoySpecWaveDataDb = activity.getBuoySpecWaveDataDb();
@@ -783,7 +783,7 @@ public class BuoyDetailFragment extends Fragment {
         card.setOnClickListener(v -> {
             ChartFullScreenFragment fragment =
                     ChartFullScreenFragment.newInstance(stationId, metricKey);
-            ((BuoyActivity) requireActivity()).navigateTo(fragment);
+            ((MainActivity) requireActivity()).navigateTo(fragment);
         });
     }
 

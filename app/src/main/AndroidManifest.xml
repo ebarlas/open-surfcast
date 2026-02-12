@@ -16,7 +16,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.OpenSurfcast">
         <activity
-            android:name=".BuoyActivity"
+            android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.OpenSurfcast">

@@ -33,18 +33,21 @@ import org.opensurfcast.tasks.TaskScheduler;
 import org.opensurfcast.ui.BuoyListFragment;
 import org.opensurfcast.ui.LogListFragment;
 import org.opensurfcast.ui.SettingsFragment;
+import org.opensurfcast.ui.TideListFragment;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class BuoyActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity {
 
     private static final String TAG_BUOYS = "TAG_BUOYS";
+    private static final String TAG_TIDES = "TAG_TIDES";
     private static final String TAG_LOGS = "TAG_LOGS";
     private static final String TAG_SETTINGS = "TAG_SETTINGS";
 
     private OpenSurfcastDbHelper dbHelper;
     private BuoyStationDb buoyStationDb;
+    private TideStationDb tideStationDb;
     private BuoyStdMetDataDb buoyStdMetDataDb;
     private BuoySpecWaveDataDb buoySpecWaveDataDb;
     private AsyncLogDb asyncLogDb;
@@ -84,6 +87,9 @@ public class BuoyActivity extends AppCompatActivity {
             int id = item.getItemId();
             if (id == R.id.nav_buoys) {
                 switchToFragment(TAG_BUOYS);
+                return true;
+            } else if (id == R.id.nav_tides) {
+                switchToFragment(TAG_TIDES);
                 return true;
             } else if (id == R.id.nav_logs) {
                 switchToFragment(TAG_LOGS);
@@ -126,6 +132,8 @@ public class BuoyActivity extends AppCompatActivity {
             fragment = new LogListFragment();
         } else if (TAG_SETTINGS.equals(tag)) {
             fragment = new SettingsFragment();
+        } else if (TAG_TIDES.equals(tag)) {
+            fragment = new TideListFragment();
         } else {
             fragment = new BuoyListFragment();
         }
@@ -143,7 +151,7 @@ public class BuoyActivity extends AppCompatActivity {
 
         dbHelper = new OpenSurfcastDbHelper(this);
         buoyStationDb = new BuoyStationDb(dbHelper);
-        TideStationDb tideStationDb = new TideStationDb(dbHelper);
+        tideStationDb = new TideStationDb(dbHelper);
         CurrentStationDb currentStationDb = new CurrentStationDb(dbHelper);
         buoyStdMetDataDb = new BuoyStdMetDataDb(dbHelper);
         buoySpecWaveDataDb = new BuoySpecWaveDataDb(dbHelper);
@@ -179,6 +187,13 @@ public class BuoyActivity extends AppCompatActivity {
      */
     public BuoyStationDb getBuoyStationDb() {
         return buoyStationDb;
+    }
+
+    /**
+     * Returns the tide station database for use by fragments.
+     */
+    public TideStationDb getTideStationDb() {
+        return tideStationDb;
     }
 
     /**

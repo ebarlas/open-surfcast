@@ -19,12 +19,13 @@ import com.google.android.material.appbar.MaterialToolbar;
 
 import org.opensurfcast.MainActivity;
 import org.opensurfcast.R;
-import org.opensurfcast.buoy.BuoyStation;
-import org.opensurfcast.db.BuoyStationDb;
+import org.opensurfcast.db.TideStationDb;
 import org.opensurfcast.prefs.UserPreferences;
+import org.opensurfcast.sync.FetchTideStationsTask;
 import org.opensurfcast.sync.SyncManager;
 import org.opensurfcast.tasks.Task;
 import org.opensurfcast.tasks.TaskListener;
+import org.opensurfcast.tide.TideStation;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,31 +34,30 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 
 /**
- * Fragment for browsing and searching the full buoy station catalog.
+ * Fragment for browsing and searching the full tide station catalog.
  * <p>
  * Allows adding/removing stations from the user's preferred list
  * via tap-to-toggle with a checkmark indicator.
  */
-public class BuoyCatalogFragment extends Fragment {
+public class TideCatalogFragment extends Fragment {
 
     private RecyclerView recyclerView;
     private TextView stationCountText;
     private EditText searchInput;
-    private BuoyCatalogAdapter adapter;
+    private TideCatalogAdapter adapter;
 
-    private BuoyStationDb buoyStationDb;
+    private TideStationDb tideStationDb;
     private UserPreferences userPreferences;
     private SyncManager syncManager;
     private ExecutorService dbExecutor;
 
     /** Full unfiltered list of all catalog stations. */
-    private List<BuoyStation> allStations = new ArrayList<>();
+    private List<TideStation> allStations = new ArrayList<>();
 
     private final TaskListener taskListener = new TaskListener() {
         @Override
         public void onTaskCompleted(Task task) {
-            // Reload catalog when station fetch completes
-            if (task.getKey().startsWith("FETCH_BUOY_STATIONS")) {
+            if (task instanceof FetchTideStationsTask) {
                 loadCatalog();
             }
         }
@@ -67,7 +67,7 @@ public class BuoyCatalogFragment extends Fragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.fragment_buoy_catalog, container, false);
+        return inflater.inflate(R.layout.fragment_tide_catalog, container, false);
     }
 
     @Override
@@ -75,7 +75,7 @@ public class BuoyCatalogFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         MainActivity activity = (MainActivity) requireActivity();
-        buoyStationDb = activity.getBuoyStationDb();
+        tideStationDb = activity.getTideStationDb();
         userPreferences = activity.getUserPreferences();
         syncManager = activity.getSyncManager();
         dbExecutor = activity.getDbExecutor();
@@ -90,17 +90,16 @@ public class BuoyCatalogFragment extends Fragment {
         recyclerView = view.findViewById(R.id.catalog_list);
 
         // RecyclerView setup
-        adapter = new BuoyCatalogAdapter();
+        adapter = new TideCatalogAdapter();
         recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         recyclerView.setAdapter(adapter);
 
-        // Toggle listener
+        // Toggle listener - no tide predictions fetched yet
         adapter.setOnStationToggleListener((station, added) -> {
             if (added) {
-                userPreferences.addPreferredBuoyStation(station.getId());
-                syncManager.fetchPreferredStationData(userPreferences);
+                userPreferences.addPreferredTideStation(station.id);
             } else {
-                userPreferences.removePreferredBuoyStation(station.getId());
+                userPreferences.removePreferredTideStation(station.id);
             }
         });
 
@@ -120,13 +119,10 @@ public class BuoyCatalogFragment extends Fragment {
             }
         });
 
-        // Register task listener for catalog refresh
         syncManager.getScheduler().addListener(taskListener);
 
-        // Show loading state
         stationCountText.setText(R.string.catalog_loading);
 
-        // Load catalog
         loadCatalog();
     }
 
@@ -137,17 +133,16 @@ public class BuoyCatalogFragment extends Fragment {
     }
 
     /**
-     * Loads all buoy stations from the database on a background thread.
+     * Loads all tide stations from the database on a background thread.
      */
     private void loadCatalog() {
         dbExecutor.execute(() -> {
-            List<BuoyStation> stations = buoyStationDb.queryAll();
+            List<TideStation> stations = tideStationDb.queryAll();
             if (isAdded()) {
                 requireActivity().runOnUiThread(() -> {
                     allStations = stations;
-                    Set<String> addedIds = userPreferences.getPreferredBuoyStations();
+                    Set<String> addedIds = userPreferences.getPreferredTideStations();
                     adapter.setAddedIds(addedIds);
-                    // Apply current search filter
                     String query = searchInput.getText().toString();
                     filterStations(query);
                 });
@@ -161,14 +156,14 @@ public class BuoyCatalogFragment extends Fragment {
     private void filterStations(String query) {
         String lowerQuery = query.trim().toLowerCase(Locale.US);
 
-        List<BuoyStation> filtered;
+        List<TideStation> filtered;
         if (lowerQuery.isEmpty()) {
             filtered = allStations;
         } else {
             filtered = new ArrayList<>();
-            for (BuoyStation station : allStations) {
-                String name = station.getName() != null ? station.getName().toLowerCase(Locale.US) : "";
-                String id = station.getId().toLowerCase(Locale.US);
+            for (TideStation station : allStations) {
+                String name = station.name != null ? station.name.toLowerCase(Locale.US) : "";
+                String id = station.id.toLowerCase(Locale.US);
                 if (name.contains(lowerQuery) || id.contains(lowerQuery)) {
                     filtered.add(station);
                 }
