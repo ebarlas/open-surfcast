@@ -20,17 +20,23 @@ import com.google.android.material.snackbar.Snackbar;
 
 import org.opensurfcast.MainActivity;
 import org.opensurfcast.R;
+import org.opensurfcast.db.TidePredictionDb;
 import org.opensurfcast.db.TideStationDb;
 import org.opensurfcast.prefs.UserPreferences;
+import org.opensurfcast.sync.FetchTidePredictionsTask;
 import org.opensurfcast.sync.FetchTideStationsTask;
 import org.opensurfcast.sync.SyncManager;
 import org.opensurfcast.tasks.Task;
 import org.opensurfcast.tasks.TaskListener;
 import org.opensurfcast.tasks.TaskScheduler;
+import org.opensurfcast.tide.TideLevelInterpolator;
+import org.opensurfcast.tide.TidePrediction;
 import org.opensurfcast.tide.TideStation;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 
@@ -38,7 +44,8 @@ import java.util.concurrent.ExecutorService;
  * Fragment displaying the user's preferred tide stations.
  * <p>
  * Provides swipe-to-delete with undo, pull-to-refresh, and a FAB
- * to navigate to the tide catalog. No tide predictions are displayed.
+ * to navigate to the tide catalog. Displays interpolated current tide level
+ * for each station.
  */
 public class TideListFragment extends Fragment {
 
@@ -49,6 +56,7 @@ public class TideListFragment extends Fragment {
     private TideListAdapter adapter;
 
     private TideStationDb tideStationDb;
+    private TidePredictionDb tidePredictionDb;
     private UserPreferences userPreferences;
     private SyncManager syncManager;
     private ExecutorService dbExecutor;
@@ -56,14 +64,14 @@ public class TideListFragment extends Fragment {
     private final TaskListener taskListener = new TaskListener() {
         @Override
         public void onTaskStarted(Task task) {
-            if (task instanceof FetchTideStationsTask) {
+            if (task instanceof FetchTideStationsTask || task instanceof FetchTidePredictionsTask) {
                 showSyncProgress(true);
             }
         }
 
         @Override
         public void onTaskCompleted(Task task) {
-            if (task instanceof FetchTideStationsTask) {
+            if (task instanceof FetchTideStationsTask || task instanceof FetchTidePredictionsTask) {
                 loadPreferredStations();
                 updateSyncState();
             }
@@ -71,7 +79,7 @@ public class TideListFragment extends Fragment {
 
         @Override
         public void onTaskFailed(Task task, Exception error) {
-            if (task instanceof FetchTideStationsTask) {
+            if (task instanceof FetchTideStationsTask || task instanceof FetchTidePredictionsTask) {
                 updateSyncState();
             }
         }
@@ -90,6 +98,7 @@ public class TideListFragment extends Fragment {
 
         MainActivity activity = (MainActivity) requireActivity();
         tideStationDb = activity.getTideStationDb();
+        tidePredictionDb = activity.getTidePredictionDb();
         userPreferences = activity.getUserPreferences();
         syncManager = activity.getSyncManager();
         dbExecutor = activity.getDbExecutor();
@@ -109,12 +118,13 @@ public class TideListFragment extends Fragment {
         ItemTouchHelper touchHelper = new ItemTouchHelper(new SwipeToDeleteCallback());
         touchHelper.attachToRecyclerView(recyclerView);
 
-        // Pull-to-refresh: sync tide station catalog only (no predictions)
+        // Pull-to-refresh: sync tide station catalog and fetch tide predictions
         swipeRefresh.setColorSchemeResources(
                 R.color.md_theme_light_primary,
                 R.color.md_theme_light_secondary);
         swipeRefresh.setOnRefreshListener(() -> {
             syncManager.fetchTideStationsOnly();
+            syncManager.fetchPreferredStationData(userPreferences);
             if (!hasTideTasksRunning()) {
                 swipeRefresh.setRefreshing(false);
             }
@@ -135,6 +145,7 @@ public class TideListFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
+        adapter.setUseMetric(userPreferences.isMetric());
         loadPreferredStations();
     }
 
@@ -145,8 +156,9 @@ public class TideListFragment extends Fragment {
     }
 
     /**
-     * Loads the preferred tide stations from the database on a background thread
-     * and updates the UI on the main thread.
+     * Loads the preferred tide stations from the database on a background thread,
+     * fetches predictions per station, interpolates current levels, and updates
+     * the UI on the main thread.
      */
     private void loadPreferredStations() {
         Set<String> preferredIds = userPreferences.getPreferredTideStations();
@@ -158,9 +170,22 @@ public class TideListFragment extends Fragment {
 
         dbExecutor.execute(() -> {
             List<TideStation> stations = tideStationDb.queryByIds(preferredIds);
+            Map<String, Double> levels = new HashMap<>();
+            long nowEpochSeconds = System.currentTimeMillis() / 1000;
+
+            for (TideStation station : stations) {
+                List<TidePrediction> predictions =
+                        tidePredictionDb.queryByStation(station.id);
+                Double level = TideLevelInterpolator.interpolate(predictions, nowEpochSeconds);
+                if (level != null) {
+                    levels.put(station.id, level);
+                }
+            }
+
             if (isAdded()) {
                 requireActivity().runOnUiThread(() -> {
-                    adapter.submitList(stations);
+                    adapter.setUseMetric(userPreferences.isMetric());
+                    adapter.submitList(stations, levels);
                     updateEmptyState(stations.isEmpty());
                 });
             }
@@ -176,7 +201,7 @@ public class TideListFragment extends Fragment {
         TaskScheduler scheduler = syncManager.getScheduler();
         Collection<Task> running = scheduler.getRunningTasks();
         for (Task task : running) {
-            if (task instanceof FetchTideStationsTask) {
+            if (task instanceof FetchTideStationsTask || task instanceof FetchTidePredictionsTask) {
                 return true;
             }
         }

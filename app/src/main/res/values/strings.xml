@@ -37,6 +37,9 @@
 
     <!-- Tide list -->
     <string name="tide_list_title">My Tides</string>
+    <string name="tide_level_metric">%.1f m</string>
+    <string name="tide_level_imperial">%.1f ft</string>
+    <string name="tide_level_unknown">—</string>
     <string name="empty_tide_list">No tide stations added yet</string>
     <string name="empty_tide_list_hint">Tap + to browse the catalog</string>
     <string name="add_tide_station">Add tide station</string>

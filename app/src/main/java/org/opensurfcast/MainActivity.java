@@ -48,6 +48,7 @@ public class MainActivity extends AppCompatActivity {
     private OpenSurfcastDbHelper dbHelper;
     private BuoyStationDb buoyStationDb;
     private TideStationDb tideStationDb;
+    private TidePredictionDb tidePredictionDb;
     private BuoyStdMetDataDb buoyStdMetDataDb;
     private BuoySpecWaveDataDb buoySpecWaveDataDb;
     private AsyncLogDb asyncLogDb;
@@ -155,7 +156,7 @@ public class MainActivity extends AppCompatActivity {
         CurrentStationDb currentStationDb = new CurrentStationDb(dbHelper);
         buoyStdMetDataDb = new BuoyStdMetDataDb(dbHelper);
         buoySpecWaveDataDb = new BuoySpecWaveDataDb(dbHelper);
-        TidePredictionDb tidePredictionDb = new TidePredictionDb(dbHelper);
+        tidePredictionDb = new TidePredictionDb(dbHelper);
         CurrentPredictionDb currentPredictionDb = new CurrentPredictionDb(dbHelper);
 
         LogDb logDb = new LogDb(dbHelper);
@@ -194,6 +195,13 @@ public class MainActivity extends AppCompatActivity {
      */
     public TideStationDb getTideStationDb() {
         return tideStationDb;
+    }
+
+    /**
+     * Returns the tide prediction database for use by fragments.
+     */
+    public TidePredictionDb getTidePredictionDb() {
+        return tidePredictionDb;
     }
 
     /**
