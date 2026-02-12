@@ -17,7 +17,7 @@ import java.util.Locale;
 /**
  * Task to fetch tide predictions for a specific station.
  * <p>
- * Fetches predictions for the next 7 days and updates the local database.
+ * Fetches predictions from 7 days back to 30 days forward and updates the local database.
  */
 public class FetchTidePredictionsTask extends BaseTask {
     private static final Duration COOLDOWN_PERIOD = Duration.ofMinutes(5);
@@ -40,12 +40,14 @@ public class FetchTidePredictionsTask extends BaseTask {
 
     @Override
     protected void execute() throws IOException {
-        // Generate date range: today to 7 days from now
+        // Generate date range: 7 days back to 30 days forward
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd", Locale.US);
-        Calendar calendar = Calendar.getInstance();
-        String beginDate = dateFormat.format(calendar.getTime());
-        calendar.add(Calendar.DAY_OF_YEAR, 7);
-        String endDate = dateFormat.format(calendar.getTime());
+        Calendar beginCal = Calendar.getInstance();
+        beginCal.add(Calendar.DAY_OF_YEAR, -7);
+        String beginDate = dateFormat.format(beginCal.getTime());
+        Calendar endCal = Calendar.getInstance();
+        endCal.add(Calendar.DAY_OF_YEAR, 30);
+        String endDate = dateFormat.format(endCal.getTime());
 
         Timer timer = new Timer();
         List<TidePrediction> predictions = CoOpsNoaaGovService.fetchTidePredictions(
