@@ -20,13 +20,11 @@ import com.google.android.material.snackbar.Snackbar;
 
 import org.opensurfcast.MainActivity;
 import org.opensurfcast.R;
-import org.opensurfcast.buoy.BuoyStdMetData;
 import org.opensurfcast.buoy.BuoyStation;
+import org.opensurfcast.buoy.BuoyStdMetData;
 import org.opensurfcast.db.BuoyStationDb;
 import org.opensurfcast.db.BuoyStdMetDataDb;
 import org.opensurfcast.prefs.UserPreferences;
-import org.opensurfcast.sync.FetchBuoySpecWaveDataTask;
-import org.opensurfcast.sync.FetchBuoyStationsTask;
 import org.opensurfcast.sync.FetchBuoyStdMetDataTask;
 import org.opensurfcast.sync.SyncManager;
 import org.opensurfcast.tasks.Task;
@@ -62,14 +60,14 @@ public class BuoyListFragment extends Fragment {
     private final TaskListener taskListener = new TaskListener() {
         @Override
         public void onTaskStarted(Task task) {
-            if (isBuoyTask(task)) {
+            if (task instanceof FetchBuoyStdMetDataTask) {
                 showSyncProgress(true);
             }
         }
 
         @Override
         public void onTaskCompleted(Task task) {
-            if (isBuoyTask(task)) {
+            if (task instanceof FetchBuoyStdMetDataTask) {
                 refreshObservations(task);
                 updateSyncState();
             }
@@ -77,7 +75,7 @@ public class BuoyListFragment extends Fragment {
 
         @Override
         public void onTaskFailed(Task task, Exception error) {
-            if (isBuoyTask(task)) {
+            if (task instanceof FetchBuoyStdMetDataTask) {
                 updateSyncState();
             }
         }
@@ -223,26 +221,14 @@ public class BuoyListFragment extends Fragment {
     }
 
     /**
-     * Returns true if the given task is a buoy-related fetch task.
-     */
-    private boolean isBuoyTask(Task task) {
-        return task instanceof FetchBuoyStationsTask
-                || task instanceof FetchBuoyStdMetDataTask
-                || task instanceof FetchBuoySpecWaveDataTask;
-    }
-
-    /**
      * Returns true if any buoy-related fetch tasks are currently running.
      */
     private boolean hasBuoyTasksRunning() {
-        TaskScheduler scheduler = syncManager.getScheduler();
-        Collection<Task> running = scheduler.getRunningTasks();
-        for (Task task : running) {
-            if (isBuoyTask(task)) {
-                return true;
-            }
-        }
-        return false;
+        return syncManager
+                .getScheduler()
+                .getRunningTasks()
+                .stream()
+                .anyMatch(t -> t instanceof FetchBuoyStdMetDataTask);
     }
 
     /**

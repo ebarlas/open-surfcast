@@ -98,7 +98,7 @@ public class BuoyCatalogFragment extends Fragment {
         adapter.setOnStationToggleListener((station, added) -> {
             if (added) {
                 userPreferences.addPreferredBuoyStation(station.getId());
-                syncManager.fetchPreferredStationData(userPreferences);
+                syncManager.fetchPreferredBuoyStationData(userPreferences);
             } else {
                 userPreferences.removePreferredBuoyStation(station.getId());
             }

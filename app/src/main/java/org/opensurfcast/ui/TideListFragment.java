@@ -24,16 +24,13 @@ import org.opensurfcast.db.TidePredictionDb;
 import org.opensurfcast.db.TideStationDb;
 import org.opensurfcast.prefs.UserPreferences;
 import org.opensurfcast.sync.FetchTidePredictionsTask;
-import org.opensurfcast.sync.FetchTideStationsTask;
 import org.opensurfcast.sync.SyncManager;
 import org.opensurfcast.tasks.Task;
 import org.opensurfcast.tasks.TaskListener;
-import org.opensurfcast.tasks.TaskScheduler;
 import org.opensurfcast.tide.TideLevelInterpolator;
 import org.opensurfcast.tide.TidePrediction;
 import org.opensurfcast.tide.TideStation;
 
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -64,22 +61,22 @@ public class TideListFragment extends Fragment {
     private final TaskListener taskListener = new TaskListener() {
         @Override
         public void onTaskStarted(Task task) {
-            if (task instanceof FetchTideStationsTask || task instanceof FetchTidePredictionsTask) {
+            if (task instanceof FetchTidePredictionsTask) {
                 showSyncProgress(true);
             }
         }
 
         @Override
         public void onTaskCompleted(Task task) {
-            if (task instanceof FetchTideStationsTask || task instanceof FetchTidePredictionsTask) {
-                loadPreferredStations();
+            if (task instanceof FetchTidePredictionsTask t) {
+                updateTideRowForStation(t.stationId());
                 updateSyncState();
             }
         }
 
         @Override
         public void onTaskFailed(Task task, Exception error) {
-            if (task instanceof FetchTideStationsTask || task instanceof FetchTidePredictionsTask) {
+            if (task instanceof FetchTidePredictionsTask) {
                 updateSyncState();
             }
         }
@@ -123,11 +120,8 @@ public class TideListFragment extends Fragment {
                 R.color.md_theme_light_primary,
                 R.color.md_theme_light_secondary);
         swipeRefresh.setOnRefreshListener(() -> {
-            syncManager.fetchTideStationsOnly();
-            syncManager.fetchPreferredStationData(userPreferences);
-            if (!hasTideTasksRunning()) {
-                swipeRefresh.setRefreshing(false);
-            }
+            loadPreferredStations();
+            swipeRefresh.setRefreshing(false);
         });
 
         // FAB -> catalog
@@ -147,6 +141,8 @@ public class TideListFragment extends Fragment {
         super.onResume();
         adapter.setUseMetric(userPreferences.isMetric());
         loadPreferredStations();
+        // Auto-fetch latest predictions from the network
+        syncManager.fetchPreferredTideStationData(userPreferences);
     }
 
     @Override
@@ -170,22 +166,26 @@ public class TideListFragment extends Fragment {
 
         dbExecutor.execute(() -> {
             List<TideStation> stations = tideStationDb.queryByIds(preferredIds);
-            Map<String, Double> levels = new HashMap<>();
+            Map<String, TideListAdapter.TideProgress> progressMap = new HashMap<>();
             long nowEpochSeconds = System.currentTimeMillis() / 1000;
 
             for (TideStation station : stations) {
                 List<TidePrediction> predictions =
                         tidePredictionDb.queryByStation(station.id);
-                Double level = TideLevelInterpolator.interpolate(predictions, nowEpochSeconds);
-                if (level != null) {
-                    levels.put(station.id, level);
+                TideLevelInterpolator.Result result =
+                        TideLevelInterpolator.interpolateWithProgress(predictions, nowEpochSeconds);
+                if (result != null) {
+                    progressMap.put(station.id, new TideListAdapter.TideProgress(
+                            result.levelMeters, result.progressFraction,
+                            result.upcomingTideMeters, result.upcomingTideIsHigh,
+                            result.upcomingTideEpochSeconds));
                 }
             }
 
             if (isAdded()) {
                 requireActivity().runOnUiThread(() -> {
                     adapter.setUseMetric(userPreferences.isMetric());
-                    adapter.submitList(stations, levels);
+                    adapter.submitList(stations, progressMap);
                     updateEmptyState(stations.isEmpty());
                 });
             }
@@ -197,15 +197,45 @@ public class TideListFragment extends Fragment {
         recyclerView.setVisibility(empty ? View.GONE : View.VISIBLE);
     }
 
-    private boolean hasTideTasksRunning() {
-        TaskScheduler scheduler = syncManager.getScheduler();
-        Collection<Task> running = scheduler.getRunningTasks();
-        for (Task task : running) {
-            if (task instanceof FetchTideStationsTask || task instanceof FetchTidePredictionsTask) {
-                return true;
-            }
+    /**
+     * Performs a targeted update of the tide row for the given station.
+     * Fetches predictions, computes progress, and calls notifyItemChanged only if data changed.
+     */
+    private void updateTideRowForStation(String stationId) {
+        if (adapter.hasCurrentProgress(stationId)) {
+            return; // progress already populated in adapter
         }
-        return false;
+
+        dbExecutor.execute(() -> {
+            TideStation station = tideStationDb.queryById(stationId);
+            if (station == null) {
+                return;
+            }
+
+            List<TidePrediction> predictions = tidePredictionDb.queryByStation(stationId);
+            long nowEpochSeconds = System.currentTimeMillis() / 1000;
+            TideLevelInterpolator.Result result =
+                    TideLevelInterpolator.interpolateWithProgress(predictions, nowEpochSeconds);
+
+            TideListAdapter.TideProgress newProgress = result != null
+                    ? new TideListAdapter.TideProgress(
+                    result.levelMeters, result.progressFraction,
+                    result.upcomingTideMeters, result.upcomingTideIsHigh,
+                    result.upcomingTideEpochSeconds)
+                    : null;
+
+            if (isAdded()) {
+                requireActivity().runOnUiThread(() ->
+                        adapter.updateProgress(stationId, newProgress));
+            }
+        });
+    }
+
+    private boolean hasTideTasksRunning() {
+        return syncManager.getScheduler()
+                .getRunningTasks()
+                .stream()
+                .anyMatch(t -> t instanceof FetchTidePredictionsTask);
     }
 
     private void showSyncProgress(boolean show) {

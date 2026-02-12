@@ -20,7 +20,7 @@ import java.util.Locale;
  * Fetches predictions from 7 days back to 30 days forward and updates the local database.
  */
 public class FetchTidePredictionsTask extends BaseTask {
-    private static final Duration COOLDOWN_PERIOD = Duration.ofMinutes(5);
+    private static final Duration COOLDOWN_PERIOD = Duration.ofDays(1);
 
     private final TidePredictionDb dataDb;
     private final String stationId;
@@ -31,6 +31,10 @@ public class FetchTidePredictionsTask extends BaseTask {
         this.dataDb = dataDb;
         this.stationId = stationId;
         this.logger = logger;
+    }
+
+    public String stationId() {
+        return stationId;
     }
 
     @Override
