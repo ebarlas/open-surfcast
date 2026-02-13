@@ -53,6 +53,18 @@
     <!-- Tide catalog -->
     <string name="tide_catalog_title">Add Tide Station</string>
 
+    <!-- Tide detail -->
+    <string name="tide_detail_title">Water Level</string>
+    <string name="tide_detail_window_size_label">Window</string>
+    <string name="tide_detail_center_date_label">Center</string>
+    <string name="tide_detail_window_days">%d days</string>
+    <string name="tide_detail_window_day">1 day</string>
+    <string name="tide_detail_time_now">Now</string>
+    <string name="tide_detail_time_days_ago">%d days ago</string>
+    <string name="tide_detail_time_days_ahead">%d days ahead</string>
+    <string name="tide_detail_time_day_ago">1 day ago</string>
+    <string name="tide_detail_time_day_ahead">1 day ahead</string>
+
     <!-- Bottom navigation -->
     <string name="nav_buoys">Buoys</string>
     <string name="nav_tides">Tides</string>

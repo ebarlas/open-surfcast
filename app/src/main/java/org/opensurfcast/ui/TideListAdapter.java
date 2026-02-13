@@ -42,6 +42,13 @@ import java.util.TimeZone;
  */
 public class TideListAdapter extends RecyclerView.Adapter<TideListAdapter.ViewHolder> {
 
+    /**
+     * Listener for station row clicks.
+     */
+    public interface OnStationClickListener {
+        void onStationClick(TideStation station);
+    }
+
     private static final double METERS_TO_FEET = 3.28084;
     private static final long BAR_ANIM_DURATION_MS = 600;
 
@@ -60,9 +67,19 @@ public class TideListAdapter extends RecyclerView.Adapter<TideListAdapter.ViewHo
     private final List<TideStation> stations = new ArrayList<>();
     private final Map<String, TideProgress> currentProgress = new HashMap<>();
     private boolean useMetric;
+    private OnStationClickListener clickListener;
 
     public boolean hasCurrentProgress(String stationId) {
         return currentProgress.containsKey(stationId);
+    }
+
+    /**
+     * Sets the click listener for station rows.
+     *
+     * @param listener the listener to be notified of clicks
+     */
+    public void setOnStationClickListener(OnStationClickListener listener) {
+        this.clickListener = listener;
     }
 
     @NonNull
@@ -78,6 +95,13 @@ public class TideListAdapter extends RecyclerView.Adapter<TideListAdapter.ViewHo
         TideStation station = stations.get(position);
         TideProgress progress = currentProgress.get(station.id);
         holder.bind(station, progress, useMetric);
+        
+        // Set click listener on the entire card
+        holder.itemView.setOnClickListener(v -> {
+            if (clickListener != null) {
+                clickListener.onStationClick(station);
+            }
+        });
     }
 
     @Override

@@ -108,6 +108,10 @@ public class TideListFragment extends Fragment {
 
         // RecyclerView setup
         adapter = new TideListAdapter();
+        adapter.setOnStationClickListener(station -> {
+            TideDetailFragment fragment = TideDetailFragment.newInstance(station.id);
+            activity.navigateTo(fragment);
+        });
         recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         recyclerView.setAdapter(adapter);
 
