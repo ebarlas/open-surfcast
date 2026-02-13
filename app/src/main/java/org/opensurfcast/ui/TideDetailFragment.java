@@ -16,6 +16,7 @@ import androidx.fragment.app.Fragment;
 import com.github.mikephil.charting.charts.CombinedChart;
 import com.github.mikephil.charting.charts.ScatterChart;
 import com.github.mikephil.charting.components.Legend;
+import com.github.mikephil.charting.components.LimitLine;
 import com.github.mikephil.charting.components.XAxis;
 import com.github.mikephil.charting.components.YAxis;
 import com.github.mikephil.charting.data.CombinedData;
@@ -353,6 +354,7 @@ public class TideDetailFragment extends Fragment {
         legend.setEnabled(false);
 
         configureXAxis(chart);
+        addCurrentTimeLine(chart);
         configureYAxis(chart);
 
         String unit = useMetric ? "m" : "ft";
@@ -434,6 +436,23 @@ public class TideDetailFragment extends Fragment {
         leftAxis.setLabelCount(6, false);
 
         chart.getAxisRight().setEnabled(false);
+    }
+
+    /**
+     * Adds a vertical dashed line at the current time on the X-axis.
+     */
+    private void addCurrentTimeLine(CombinedChart chart) {
+        float nowEpochSeconds = System.currentTimeMillis() / 1000f;
+
+        int lineColor = resolveColor(com.google.android.material.R.attr.colorError);
+
+        LimitLine nowLine = new LimitLine(nowEpochSeconds);
+        nowLine.setLineColor(lineColor);
+        nowLine.setLineWidth(1.5f);
+        nowLine.enableDashedLine(10f, 6f, 0f);
+        nowLine.setLabel(null);
+
+        chart.getXAxis().addLimitLine(nowLine);
     }
 
     private void enableTouchControls(CombinedChart chart) {

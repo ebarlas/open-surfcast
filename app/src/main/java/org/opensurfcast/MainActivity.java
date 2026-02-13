@@ -5,6 +5,7 @@ import android.os.Handler;
 import android.os.Looper;
 
 import androidx.activity.EdgeToEdge;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -44,6 +45,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG_TIDES = "TAG_TIDES";
     private static final String TAG_LOGS = "TAG_LOGS";
     private static final String TAG_SETTINGS = "TAG_SETTINGS";
+    private static final String KEY_CURRENT_TAG = "current_tag";
 
     private OpenSurfcastDbHelper dbHelper;
     private BuoyStationDb buoyStationDb;
@@ -63,6 +65,10 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // Apply persisted theme before the activity inflates its layout
+        userPreferences = new UserPreferences(this);
+        UserPreferences.applyThemeMode(userPreferences.getThemeMode());
+
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
@@ -102,12 +108,14 @@ public class MainActivity extends AppCompatActivity {
             return false;
         });
 
-        // Load the default fragment
+        // Load the default fragment, or restore the active tag after recreation
         if (savedInstanceState == null) {
             getSupportFragmentManager()
                     .beginTransaction()
                     .replace(R.id.fragment_container, new BuoyListFragment(), TAG_BUOYS)
                     .commit();
+        } else {
+            currentTag = savedInstanceState.getString(KEY_CURRENT_TAG, TAG_BUOYS);
         }
 
         // Sync station catalogs on launch
@@ -163,7 +171,7 @@ public class MainActivity extends AppCompatActivity {
         asyncLogDb = new AsyncLogDb(logDb, dbExecutor);
         Logger logger = new AppLogger(asyncLogDb);
 
-        userPreferences = new UserPreferences(this);
+        // userPreferences is initialized early in onCreate() for theme application
         HttpCache httpCache = new HttpCache(this);
 
         TaskCooldowns cooldowns = new TaskCooldowns(this);
@@ -265,6 +273,12 @@ public class MainActivity extends AppCompatActivity {
                 .replace(R.id.fragment_container, fragment)
                 .addToBackStack(null)
                 .commit();
+    }
+
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putString(KEY_CURRENT_TAG, currentTag);
     }
 
     @Override

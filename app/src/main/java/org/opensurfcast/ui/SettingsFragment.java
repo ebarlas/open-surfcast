@@ -9,8 +9,10 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.fragment.app.Fragment;
 
+import com.google.android.material.button.MaterialButtonToggleGroup;
 import com.google.android.material.materialswitch.MaterialSwitch;
 
 import org.opensurfcast.MainActivity;
@@ -26,6 +28,7 @@ import org.opensurfcast.prefs.UserPreferences;
 public class SettingsFragment extends Fragment {
 
     private UserPreferences userPreferences;
+    private MaterialButtonToggleGroup themeToggleGroup;
     private MaterialSwitch metricSwitch;
     private TextView metricSummary;
 
@@ -44,6 +47,21 @@ public class SettingsFragment extends Fragment {
         MainActivity activity = (MainActivity) requireActivity();
         userPreferences = activity.getUserPreferences();
 
+        // --- Theme mode toggle ---
+        themeToggleGroup = view.findViewById(R.id.toggle_theme_mode);
+
+        // Select the button matching the persisted mode
+        int savedMode = userPreferences.getThemeMode();
+        themeToggleGroup.check(themeModeToButtonId(savedMode));
+
+        themeToggleGroup.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
+            if (!isChecked) return; // only act on the newly checked button
+            int mode = buttonIdToThemeMode(checkedId);
+            userPreferences.setThemeMode(mode);
+            UserPreferences.applyThemeMode(mode);
+        });
+
+        // --- Metric units toggle ---
         metricSwitch = view.findViewById(R.id.switch_use_metric);
         metricSummary = view.findViewById(R.id.metric_summary);
         LinearLayout metricRow = view.findViewById(R.id.setting_use_metric);
@@ -67,5 +85,29 @@ public class SettingsFragment extends Fragment {
         metricSummary.setText(isMetric
                 ? R.string.settings_use_metric_summary_on
                 : R.string.settings_use_metric_summary_off);
+    }
+
+    /**
+     * Maps an {@link AppCompatDelegate} night-mode constant to the corresponding button ID.
+     */
+    private int themeModeToButtonId(int mode) {
+        if (mode == AppCompatDelegate.MODE_NIGHT_NO) {
+            return R.id.btn_theme_light;
+        } else if (mode == AppCompatDelegate.MODE_NIGHT_YES) {
+            return R.id.btn_theme_dark;
+        }
+        return R.id.btn_theme_system;
+    }
+
+    /**
+     * Maps a toggle-group button ID to the corresponding {@link AppCompatDelegate} night-mode constant.
+     */
+    private int buttonIdToThemeMode(int buttonId) {
+        if (buttonId == R.id.btn_theme_light) {
+            return AppCompatDelegate.MODE_NIGHT_NO;
+        } else if (buttonId == R.id.btn_theme_dark) {
+            return AppCompatDelegate.MODE_NIGHT_YES;
+        }
+        return AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM;
     }
 }

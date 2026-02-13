@@ -3,6 +3,8 @@ package org.opensurfcast.prefs;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import androidx.appcompat.app.AppCompatDelegate;
+
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -26,8 +28,11 @@ public class UserPreferences {
     private static final String KEY_HOME_LATITUDE = "home_latitude";
     private static final String KEY_HOME_LONGITUDE = "home_longitude";
 
-    // Future: Units preference keys
+    // Units preference keys
     private static final String KEY_USE_METRIC = "use_metric";
+
+    // Theme preference keys
+    private static final String KEY_THEME_MODE = "theme_mode";
 
     // Sentinel value for unset coordinates
     private static final float COORDINATE_NOT_SET = Float.NaN;
@@ -284,6 +289,45 @@ public class UserPreferences {
         prefs.edit()
                 .putBoolean(KEY_USE_METRIC, useMetric)
                 .apply();
+    }
+
+    // ========== Theme Preferences ==========
+
+    /**
+     * Returns the persisted theme mode.
+     * <p>
+     * Valid values correspond to {@link AppCompatDelegate} night-mode constants:
+     * {@link AppCompatDelegate#MODE_NIGHT_FOLLOW_SYSTEM},
+     * {@link AppCompatDelegate#MODE_NIGHT_NO},
+     * {@link AppCompatDelegate#MODE_NIGHT_YES}.
+     *
+     * @return the stored night-mode constant (default: follow system)
+     */
+    public int getThemeMode() {
+        return prefs.getInt(KEY_THEME_MODE, AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+    }
+
+    /**
+     * Persists the chosen theme mode.
+     *
+     * @param mode one of {@link AppCompatDelegate#MODE_NIGHT_FOLLOW_SYSTEM},
+     *             {@link AppCompatDelegate#MODE_NIGHT_NO}, or
+     *             {@link AppCompatDelegate#MODE_NIGHT_YES}
+     */
+    public void setThemeMode(int mode) {
+        prefs.edit()
+                .putInt(KEY_THEME_MODE, mode)
+                .apply();
+    }
+
+    /**
+     * Applies the given theme mode to the running application via
+     * {@link AppCompatDelegate#setDefaultNightMode(int)}.
+     *
+     * @param mode night-mode constant to apply
+     */
+    public static void applyThemeMode(int mode) {
+        AppCompatDelegate.setDefaultNightMode(mode);
     }
 
     // ========== Utility Methods ==========

@@ -2,7 +2,7 @@
     <string name="app_name">OpenSurfcast</string>
 
     <!-- Buoy list -->
-    <string name="buoy_list_title">My Buoys</string>
+    <string name="buoy_list_title">Buoys</string>
     <string name="empty_buoy_list">No buoys added yet</string>
     <string name="empty_buoy_list_hint">Tap + to browse the catalog</string>
     <string name="add_buoy">Add buoy</string>
@@ -36,7 +36,7 @@
     <string name="chart_fullscreen_reset_zoom">Reset Zoom</string>
 
     <!-- Tide list -->
-    <string name="tide_list_title">My Tides</string>
+    <string name="tide_list_title">Tides</string>
     <string name="tide_level_metric">%.1f m</string>
     <string name="tide_level_imperial">%.1f ft</string>
     <string name="tide_level_unknown">—</string>
@@ -73,6 +73,11 @@
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>
+    <string name="settings_appearance_header">Appearance</string>
+    <string name="settings_theme_title">Theme</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_theme_system">System</string>
     <string name="settings_units_header">Units</string>
     <string name="settings_use_metric_title">Use metric units</string>
     <string name="settings_use_metric_summary_on">Showing measurements in metric (°C, m, km/h)</string>
