@@ -1,9 +1,13 @@
 package org.opensurfcast.ui;
 
+import android.content.Context;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
+import android.widget.Filter;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -17,20 +21,34 @@ import com.google.android.material.materialswitch.MaterialSwitch;
 
 import org.opensurfcast.MainActivity;
 import org.opensurfcast.R;
+import org.opensurfcast.db.TideStationDb;
 import org.opensurfcast.prefs.UserPreferences;
+import org.opensurfcast.tide.TideStation;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.concurrent.ExecutorService;
 
 /**
  * Fragment displaying application settings.
  * <p>
- * Currently provides a toggle for metric vs imperial units.
- * Additional settings will be added here in the future.
+ * Provides controls for theme mode, metric/imperial units, and home tide station selection.
  */
 public class SettingsFragment extends Fragment {
 
     private UserPreferences userPreferences;
+    private TideStationDb tideStationDb;
+    private ExecutorService dbExecutor;
+
     private MaterialButtonToggleGroup themeToggleGroup;
     private MaterialSwitch metricSwitch;
     private TextView metricSummary;
+    private AutoCompleteTextView homeStationInput;
+    private TextView homeStationSummary;
+
+    /** Full list of all tide stations loaded from the database. */
+    private List<TideStation> allStations = new ArrayList<>();
 
     @Nullable
     @Override
@@ -46,6 +64,8 @@ public class SettingsFragment extends Fragment {
 
         MainActivity activity = (MainActivity) requireActivity();
         userPreferences = activity.getUserPreferences();
+        tideStationDb = activity.getTideStationDb();
+        dbExecutor = activity.getDbExecutor();
 
         // --- Theme mode toggle ---
         themeToggleGroup = view.findViewById(R.id.toggle_theme_mode);
@@ -60,6 +80,25 @@ public class SettingsFragment extends Fragment {
             userPreferences.setThemeMode(mode);
             UserPreferences.applyThemeMode(mode);
         });
+
+        // --- Home location selector ---
+        homeStationInput = view.findViewById(R.id.home_station_input);
+        homeStationSummary = view.findViewById(R.id.home_station_summary);
+
+        // Show current selection
+        updateHomeStationSummary();
+
+        // When a station is picked from the dropdown, persist and update summary
+        homeStationInput.setOnItemClickListener((parent, v, position, id) -> {
+            TideStation station = (TideStation) parent.getItemAtPosition(position);
+            userPreferences.setHomeLocation(
+                    station.id, station.name, station.latitude, station.longitude);
+            homeStationInput.setText("", false);
+            updateHomeStationSummary();
+        });
+
+        // Load tide stations for autocomplete
+        loadTideStations();
 
         // --- Metric units toggle ---
         metricSwitch = view.findViewById(R.id.switch_use_metric);
@@ -79,6 +118,38 @@ public class SettingsFragment extends Fragment {
 
         // Tapping anywhere on the row toggles the switch
         metricRow.setOnClickListener(v -> metricSwitch.toggle());
+    }
+
+    /**
+     * Loads all tide stations from the database on a background thread,
+     * then sets up the autocomplete adapter on the UI thread.
+     */
+    private void loadTideStations() {
+        dbExecutor.execute(() -> {
+            List<TideStation> stations = tideStationDb.queryAll();
+            if (isAdded()) {
+                requireActivity().runOnUiThread(() -> {
+                    allStations = stations;
+                    TideStationAdapter adapter = new TideStationAdapter(
+                            requireContext(), allStations);
+                    homeStationInput.setAdapter(adapter);
+                });
+            }
+        });
+    }
+
+    /**
+     * Updates the home station summary text from persisted preferences.
+     */
+    private void updateHomeStationSummary() {
+        String name = userPreferences.getHomeStationName();
+        if (name != null) {
+            String stationId = userPreferences.getHomeStationId();
+            homeStationSummary.setText(getString(
+                    R.string.settings_home_station_summary, name, stationId));
+        } else {
+            homeStationSummary.setText(R.string.settings_home_station_none);
+        }
     }
 
     private void updateMetricSummary(boolean isMetric) {
@@ -109,5 +180,98 @@ public class SettingsFragment extends Fragment {
             return AppCompatDelegate.MODE_NIGHT_YES;
         }
         return AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM;
+    }
+
+    // ========== Autocomplete Adapter ==========
+
+    /**
+     * Custom {@link ArrayAdapter} for tide station autocomplete.
+     * Filters stations by name or ID substring match (case-insensitive),
+     * mirroring the search behavior in {@link TideCatalogFragment}.
+     */
+    private static class TideStationAdapter extends ArrayAdapter<TideStation> {
+
+        private final List<TideStation> allStations;
+        private List<TideStation> filtered;
+
+        TideStationAdapter(@NonNull Context context, @NonNull List<TideStation> stations) {
+            super(context, android.R.layout.simple_dropdown_item_1line, new ArrayList<>(stations));
+            this.allStations = stations;
+            this.filtered = new ArrayList<>(stations);
+        }
+
+        @Override
+        public int getCount() {
+            return filtered.size();
+        }
+
+        @Nullable
+        @Override
+        public TideStation getItem(int position) {
+            return filtered.get(position);
+        }
+
+        @NonNull
+        @Override
+        public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
+            if (convertView == null) {
+                convertView = LayoutInflater.from(getContext())
+                        .inflate(android.R.layout.simple_dropdown_item_1line, parent, false);
+            }
+            TideStation station = getItem(position);
+            TextView text = convertView.findViewById(android.R.id.text1);
+            if (station != null) {
+                String state = (station.state != null && !station.state.isEmpty())
+                        ? ", " + station.state : "";
+                text.setText(station.name + state + " (" + station.id + ")");
+            }
+            return convertView;
+        }
+
+        @NonNull
+        @Override
+        public Filter getFilter() {
+            return new Filter() {
+                @Override
+                protected FilterResults performFiltering(CharSequence constraint) {
+                    FilterResults results = new FilterResults();
+                    if (constraint == null || constraint.length() == 0) {
+                        results.values = new ArrayList<>(allStations);
+                        results.count = allStations.size();
+                    } else {
+                        String query = constraint.toString().trim().toLowerCase(Locale.US);
+                        List<TideStation> matched = new ArrayList<>();
+                        for (TideStation station : allStations) {
+                            String name = station.name != null
+                                    ? station.name.toLowerCase(Locale.US) : "";
+                            String id = station.id.toLowerCase(Locale.US);
+                            if (name.contains(query) || id.contains(query)) {
+                                matched.add(station);
+                            }
+                        }
+                        results.values = matched;
+                        results.count = matched.size();
+                    }
+                    return results;
+                }
+
+                @Override
+                @SuppressWarnings("unchecked")
+                protected void publishResults(CharSequence constraint, FilterResults results) {
+                    filtered = (List<TideStation>) results.values;
+                    if (results.count > 0) {
+                        notifyDataSetChanged();
+                    } else {
+                        notifyDataSetInvalidated();
+                    }
+                }
+
+                @Override
+                public CharSequence convertResultToString(Object resultValue) {
+                    TideStation station = (TideStation) resultValue;
+                    return station.name != null ? station.name : station.id;
+                }
+            };
+        }
     }
 }

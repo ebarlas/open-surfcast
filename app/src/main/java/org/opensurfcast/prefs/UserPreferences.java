@@ -24,9 +24,11 @@ public class UserPreferences {
     private static final String KEY_PREFERRED_TIDE_STATIONS = "preferred_tide_stations";
     private static final String KEY_PREFERRED_CURRENT_STATIONS = "preferred_current_stations";
 
-    // Future: Location preference keys
+    // Home location preference keys
     private static final String KEY_HOME_LATITUDE = "home_latitude";
     private static final String KEY_HOME_LONGITUDE = "home_longitude";
+    private static final String KEY_HOME_STATION_ID = "home_station_id";
+    private static final String KEY_HOME_STATION_NAME = "home_station_name";
 
     // Units preference keys
     private static final String KEY_USE_METRIC = "use_metric";
@@ -221,7 +223,25 @@ public class UserPreferences {
         return getPreferredCurrentStations().contains(id);
     }
 
-    // ========== Home Location Preferences (Future) ==========
+    // ========== Home Location Preferences ==========
+
+    /**
+     * Returns the home tide station ID, or null if no station has been selected.
+     *
+     * @return station ID, or null
+     */
+    public String getHomeStationId() {
+        return prefs.getString(KEY_HOME_STATION_ID, null);
+    }
+
+    /**
+     * Returns the home tide station name, or null if no station has been selected.
+     *
+     * @return station name, or null
+     */
+    public String getHomeStationName() {
+        return prefs.getString(KEY_HOME_STATION_NAME, null);
+    }
 
     /**
      * Returns the home latitude coordinate.
@@ -266,6 +286,25 @@ public class UserPreferences {
         float value = (longitude != null) ? longitude.floatValue() : COORDINATE_NOT_SET;
         prefs.edit()
                 .putFloat(KEY_HOME_LONGITUDE, value)
+                .apply();
+    }
+
+    /**
+     * Sets the home location from a tide station selection.
+     * All four values are written in a single atomic commit.
+     *
+     * @param stationId   the tide station ID
+     * @param stationName the tide station display name
+     * @param latitude    the station latitude
+     * @param longitude   the station longitude
+     */
+    public void setHomeLocation(String stationId, String stationName,
+                                double latitude, double longitude) {
+        prefs.edit()
+                .putString(KEY_HOME_STATION_ID, stationId)
+                .putString(KEY_HOME_STATION_NAME, stationName)
+                .putFloat(KEY_HOME_LATITUDE, (float) latitude)
+                .putFloat(KEY_HOME_LONGITUDE, (float) longitude)
                 .apply();
     }
 

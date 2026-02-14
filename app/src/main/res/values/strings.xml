@@ -111,6 +111,10 @@
     <string name="settings_use_metric_title">Use metric units</string>
     <string name="settings_use_metric_summary_on">Showing measurements in metric (°C, m, km/h)</string>
     <string name="settings_use_metric_summary_off">Showing measurements in imperial (°F, ft, mph)</string>
+    <string name="settings_home_location_header">Home Location</string>
+    <string name="settings_home_station_hint">Search tide stations</string>
+    <string name="settings_home_station_summary">%1$s, %2$s</string>
+    <string name="settings_home_station_none">No station selected</string>
 
     <!-- Log list -->
     <string name="log_list_title">Logs</string>
