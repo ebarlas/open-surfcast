@@ -12,6 +12,11 @@
         android:title="@string/nav_tides" />
 
     <item
+        android:id="@+id/nav_currents"
+        android:icon="@drawable/ic_current"
+        android:title="@string/nav_currents" />
+
+    <item
         android:id="@+id/nav_logs"
         android:icon="@drawable/ic_article"
         android:title="@string/nav_logs" />

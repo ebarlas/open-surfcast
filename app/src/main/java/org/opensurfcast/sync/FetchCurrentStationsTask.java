@@ -17,7 +17,7 @@ import java.util.List;
  * Fetches all current prediction stations and updates the local database.
  */
 public class FetchCurrentStationsTask extends BaseTask {
-    private static final Duration COOLDOWN_PERIOD = Duration.ofHours(1);
+    private static final Duration COOLDOWN_PERIOD = Duration.ofDays(1);
 
     private final CurrentStationDb stationDb;
     private final Logger logger;

@@ -17,10 +17,11 @@ import java.util.Locale;
 /**
  * Task to fetch current predictions for a specific station.
  * <p>
- * Fetches predictions for the next 7 days and updates the local database.
+ * Fetches predictions from 7 days ago to 30 days ahead and updates the
+ * local database.
  */
 public class FetchCurrentPredictionsTask extends BaseTask {
-    private static final Duration COOLDOWN_PERIOD = Duration.ofMinutes(5);
+    private static final Duration COOLDOWN_PERIOD = Duration.ofHours(12);
 
     private final CurrentPredictionDb dataDb;
     private final String stationId;
@@ -33,6 +34,10 @@ public class FetchCurrentPredictionsTask extends BaseTask {
         this.logger = logger;
     }
 
+    public String stationId() {
+        return stationId;
+    }
+
     @Override
     protected String getKeySuffix() {
         return stationId;
@@ -40,11 +45,12 @@ public class FetchCurrentPredictionsTask extends BaseTask {
 
     @Override
     protected void execute() throws IOException {
-        // Generate date range: today to 7 days from now
+        // Generate date range: 7 days ago to 30 days from now
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd", Locale.US);
         Calendar calendar = Calendar.getInstance();
+        calendar.add(Calendar.DAY_OF_YEAR, -7);
         String beginDate = dateFormat.format(calendar.getTime());
-        calendar.add(Calendar.DAY_OF_YEAR, 7);
+        calendar.add(Calendar.DAY_OF_YEAR, 37); // -7 + 37 = +30
         String endDate = dateFormat.format(calendar.getTime());
 
         Timer timer = new Timer();

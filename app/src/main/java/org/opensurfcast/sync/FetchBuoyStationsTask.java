@@ -22,7 +22,7 @@ import java.util.Set;
  * and skip redundant downloads.
  */
 public class FetchBuoyStationsTask extends BaseTask {
-    private static final Duration COOLDOWN_PERIOD = Duration.ofHours(1);
+    private static final Duration COOLDOWN_PERIOD = Duration.ofDays(1);
 
     private final BuoyStationDb stationDb;
     private final HttpCache httpCache;

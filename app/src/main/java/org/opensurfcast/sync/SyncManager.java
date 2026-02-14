@@ -33,16 +33,16 @@ public class SyncManager {
     /**
      * Creates a new sync manager.
      *
-     * @param scheduler             task scheduler for background execution
-     * @param buoyStationDb         buoy station database
-     * @param tideStationDb         tide station database
-     * @param currentStationDb      current station database
-     * @param buoyStdMetDataDb      buoy standard met data database
-     * @param buoySpecWaveDataDb    buoy spectral wave data database
-     * @param tidePredictionDb      tide prediction database
-     * @param currentPredictionDb   current prediction database
-     * @param httpCache             HTTP cache for Last-Modified headers
-     * @param logger                logger for task logging
+     * @param scheduler           task scheduler for background execution
+     * @param buoyStationDb       buoy station database
+     * @param tideStationDb       tide station database
+     * @param currentStationDb    current station database
+     * @param buoyStdMetDataDb    buoy standard met data database
+     * @param buoySpecWaveDataDb  buoy spectral wave data database
+     * @param tidePredictionDb    tide prediction database
+     * @param currentPredictionDb current prediction database
+     * @param httpCache           HTTP cache for Last-Modified headers
+     * @param logger              logger for task logging
      */
     public SyncManager(
             TaskScheduler scheduler,
@@ -96,24 +96,6 @@ public class SyncManager {
         scheduler.submit(new FetchCurrentStationsTask(currentStationDb, logger));
     }
 
-    /**
-     * Fetches data for all preferred stations.
-     * <p>
-     * Queries user preferences and submits tasks to fetch data
-     * for each preferred station.
-     *
-     * @param prefs user preferences containing preferred station IDs
-     */
-    public void fetchPreferredStationData(UserPreferences prefs) {
-        fetchPreferredBuoyStationData(prefs);
-        fetchPreferredTideStationData(prefs);
-
-        // Fetch current predictions
-        for (String stationId : prefs.getPreferredCurrentStations()) {
-            scheduler.submit(new FetchCurrentPredictionsTask(currentPredictionDb, stationId, logger));
-        }
-    }
-
     public void fetchPreferredBuoyStationData(UserPreferences prefs) {
         for (String stationId : prefs.getPreferredBuoyStations()) {
             scheduler.submit(new FetchBuoyStdMetDataTask(buoyStdMetDataDb, stationId, httpCache, logger));
@@ -124,6 +106,17 @@ public class SyncManager {
     public void fetchPreferredTideStationData(UserPreferences prefs) {
         for (String stationId : prefs.getPreferredTideStations()) {
             scheduler.submit(new FetchTidePredictionsTask(tidePredictionDb, stationId, logger));
+        }
+    }
+
+    /**
+     * Fetches current predictions for all preferred current stations.
+     *
+     * @param prefs user preferences containing preferred current station IDs
+     */
+    public void fetchPreferredCurrentStationData(UserPreferences prefs) {
+        for (String stationId : prefs.getPreferredCurrentStations()) {
+            scheduler.submit(new FetchCurrentPredictionsTask(currentPredictionDb, stationId, logger));
         }
     }
 }

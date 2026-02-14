@@ -20,39 +20,40 @@ import com.google.android.material.snackbar.Snackbar;
 
 import org.opensurfcast.MainActivity;
 import org.opensurfcast.R;
-import org.opensurfcast.buoy.BuoyStation;
-import org.opensurfcast.buoy.BuoyStdMetData;
-import org.opensurfcast.db.BuoyStationDb;
-import org.opensurfcast.db.BuoyStdMetDataDb;
+import org.opensurfcast.db.CurrentPredictionDb;
+import org.opensurfcast.db.CurrentStationDb;
 import org.opensurfcast.prefs.UserPreferences;
-import org.opensurfcast.sync.FetchBuoyStdMetDataTask;
+import org.opensurfcast.sync.FetchCurrentPredictionsTask;
 import org.opensurfcast.sync.SyncManager;
 import org.opensurfcast.tasks.Task;
 import org.opensurfcast.tasks.TaskListener;
-import org.opensurfcast.tasks.TaskScheduler;
+import org.opensurfcast.tide.CurrentPrediction;
+import org.opensurfcast.tide.CurrentStation;
+import org.opensurfcast.tide.CurrentVelocityInterpolator;
 
-import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 
 /**
- * Fragment displaying the user's preferred buoy stations.
+ * Fragment displaying the user's preferred current stations.
  * <p>
  * Provides swipe-to-delete with undo, pull-to-refresh, and a FAB
- * to navigate to the buoy catalog.
+ * to navigate to the current station catalog. Displays interpolated
+ * current velocity for each station.
  */
-public class BuoyListFragment extends Fragment {
+public class CurrentListFragment extends Fragment {
 
     private RecyclerView recyclerView;
     private LinearLayout emptyState;
     private SwipeRefreshLayout swipeRefresh;
     private LinearProgressIndicator syncProgress;
-    private BuoyListAdapter adapter;
+    private CurrentListAdapter adapter;
 
-    private BuoyStationDb buoyStationDb;
-    private BuoyStdMetDataDb buoyStdMetDataDb;
+    private CurrentStationDb currentStationDb;
+    private CurrentPredictionDb currentPredictionDb;
     private UserPreferences userPreferences;
     private SyncManager syncManager;
     private ExecutorService dbExecutor;
@@ -60,22 +61,22 @@ public class BuoyListFragment extends Fragment {
     private final TaskListener taskListener = new TaskListener() {
         @Override
         public void onTaskStarted(Task task) {
-            if (task instanceof FetchBuoyStdMetDataTask) {
+            if (task instanceof FetchCurrentPredictionsTask) {
                 showSyncProgress(true);
             }
         }
 
         @Override
         public void onTaskCompleted(Task task) {
-            if (task instanceof FetchBuoyStdMetDataTask) {
-                refreshObservations(task);
+            if (task instanceof FetchCurrentPredictionsTask t) {
+                updateCurrentRowForStation(t.stationId());
                 updateSyncState();
             }
         }
 
         @Override
         public void onTaskFailed(Task task, Exception error) {
-            if (task instanceof FetchBuoyStdMetDataTask) {
+            if (task instanceof FetchCurrentPredictionsTask) {
                 updateSyncState();
             }
         }
@@ -85,7 +86,7 @@ public class BuoyListFragment extends Fragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.fragment_buoy_list, container, false);
+        return inflater.inflate(R.layout.fragment_current_list, container, false);
     }
 
     @Override
@@ -93,23 +94,24 @@ public class BuoyListFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         MainActivity activity = (MainActivity) requireActivity();
-        buoyStationDb = activity.getBuoyStationDb();
-        buoyStdMetDataDb = activity.getBuoyStdMetDataDb();
+        currentStationDb = activity.getCurrentStationDb();
+        currentPredictionDb = activity.getCurrentPredictionDb();
         userPreferences = activity.getUserPreferences();
         syncManager = activity.getSyncManager();
         dbExecutor = activity.getDbExecutor();
 
-        recyclerView = view.findViewById(R.id.buoy_list);
+        recyclerView = view.findViewById(R.id.current_list);
         emptyState = view.findViewById(R.id.empty_state);
         swipeRefresh = view.findViewById(R.id.swipe_refresh);
         syncProgress = view.findViewById(R.id.sync_progress);
-        FloatingActionButton fab = view.findViewById(R.id.fab_add_buoy);
+        FloatingActionButton fab = view.findViewById(R.id.fab_add_current);
 
         // RecyclerView setup
-        adapter = new BuoyListAdapter();
-        adapter.setUseMetric(userPreferences.isMetric());
-        adapter.setOnItemClickListener(station ->
-                activity.navigateTo(BuoyDetailFragment.newInstance(station.getId())));
+        adapter = new CurrentListAdapter();
+        adapter.setOnStationClickListener(station -> {
+            CurrentDetailFragment fragment = CurrentDetailFragment.newInstance(station.id);
+            activity.navigateTo(fragment);
+        });
         recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         recyclerView.setAdapter(adapter);
 
@@ -122,23 +124,18 @@ public class BuoyListFragment extends Fragment {
                 R.color.md_theme_light_primary,
                 R.color.md_theme_light_secondary);
         swipeRefresh.setOnRefreshListener(() -> {
-            syncManager.fetchPreferredBuoyStationData(userPreferences);
-            // If all buoy tasks were rejected (on cooldown or already running),
-            // no callbacks will fire, so clear the refresh indicator immediately.
-            if (!hasBuoyTasksRunning()) {
-                swipeRefresh.setRefreshing(false);
-            }
+            loadPreferredStations();
+            swipeRefresh.setRefreshing(false);
         });
 
         // FAB -> catalog
         fab.setOnClickListener(v ->
-                activity.navigateTo(new BuoyCatalogFragment()));
+                activity.navigateTo(new CurrentCatalogFragment()));
 
         // Register task listener
         syncManager.getScheduler().addListener(taskListener);
 
-        // Show progress if sync tasks are already running
-        if (hasBuoyTasksRunning()) {
+        if (hasCurrentTasksRunning()) {
             showSyncProgress(true);
         }
     }
@@ -146,12 +143,10 @@ public class BuoyListFragment extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-        // Re-apply unit preference (user may have changed it in settings)
         adapter.setUseMetric(userPreferences.isMetric());
-        // Refresh when returning from catalog (user may have added stations)
         loadPreferredStations();
-        // Auto-fetch latest observations from the network
-        syncManager.fetchPreferredBuoyStationData(userPreferences);
+        // Auto-fetch latest predictions from the network
+        syncManager.fetchPreferredCurrentStationData(userPreferences);
     }
 
     @Override
@@ -161,11 +156,12 @@ public class BuoyListFragment extends Fragment {
     }
 
     /**
-     * Loads the preferred buoy stations from the database on a background thread
-     * and updates the UI on the main thread.
+     * Loads the preferred current stations from the database on a background thread,
+     * fetches predictions per station, interpolates current velocity, and updates
+     * the UI on the main thread.
      */
     private void loadPreferredStations() {
-        Set<String> preferredIds = userPreferences.getPreferredBuoyStations();
+        Set<String> preferredIds = userPreferences.getPreferredCurrentStations();
         if (preferredIds.isEmpty()) {
             updateEmptyState(true);
             adapter.submitList(null);
@@ -173,44 +169,28 @@ public class BuoyListFragment extends Fragment {
         }
 
         dbExecutor.execute(() -> {
-            List<BuoyStation> stations = buoyStationDb.queryByIds(preferredIds);
-            Map<String, BuoyStdMetData> latestObs =
-                    buoyStdMetDataDb.queryLatestByStations(preferredIds);
+            List<CurrentStation> stations = currentStationDb.queryByIds(preferredIds);
+            Map<String, CurrentListAdapter.CurrentProgress> progressMap = new HashMap<>();
+            long nowEpochSeconds = System.currentTimeMillis() / 1000;
+
+            for (CurrentStation station : stations) {
+                List<CurrentPrediction> predictions =
+                        currentPredictionDb.queryByStation(station.id);
+                CurrentVelocityInterpolator.Result result =
+                        CurrentVelocityInterpolator.interpolateWithProgress(predictions, nowEpochSeconds);
+                if (result != null) {
+                    progressMap.put(station.id, new CurrentListAdapter.CurrentProgress(
+                            result.velocityCmPerSec, result.progressFraction,
+                            result.upcomingType, result.upcomingEpochSeconds));
+                }
+            }
+
             if (isAdded()) {
                 requireActivity().runOnUiThread(() -> {
-                    adapter.submitList(stations);
-                    adapter.submitObservations(latestObs);
+                    adapter.setUseMetric(userPreferences.isMetric());
+                    adapter.submitList(stations, progressMap);
                     updateEmptyState(stations.isEmpty());
                 });
-            }
-        });
-    }
-
-    /**
-     * Refreshes only the observation data for already-loaded stations.
-     * <p>
-     * Unlike {@link #loadPreferredStations()}, this does not re-query the
-     * station list. It queries the latest observations and uses the adapter's
-     * timestamp-aware {@link BuoyListAdapter#updateObservations} to only
-     * invalidate row tiles whose observation time has actually changed.
-     */
-    private void refreshObservations(Task task) {
-        if (!(task instanceof FetchBuoyStdMetDataTask)) {
-            return;
-        }
-
-        var stationId = ((FetchBuoyStdMetDataTask) task).stationId();
-
-        Set<String> preferredIds = userPreferences.getPreferredBuoyStations();
-        if (!preferredIds.contains(stationId)) {
-            return;
-        }
-
-        dbExecutor.execute(() -> {
-            BuoyStdMetData latestObs = buoyStdMetDataDb.queryLatestByStation(stationId);
-            if (isAdded()) {
-                requireActivity().runOnUiThread(() ->
-                        adapter.updateObservations(stationId, latestObs));
             }
         });
     }
@@ -221,29 +201,45 @@ public class BuoyListFragment extends Fragment {
     }
 
     /**
-     * Returns true if any buoy-related fetch tasks are currently running.
+     * Performs a targeted update of the current row for the given station.
      */
-    private boolean hasBuoyTasksRunning() {
-        return syncManager
-                .getScheduler()
-                .getRunningTasks()
-                .stream()
-                .anyMatch(t -> t instanceof FetchBuoyStdMetDataTask);
+    private void updateCurrentRowForStation(String stationId) {
+        if (adapter.hasCurrentProgress(stationId)) {
+            return;
+        }
+
+        dbExecutor.execute(() -> {
+            List<CurrentPrediction> predictions = currentPredictionDb.queryByStation(stationId);
+            long nowEpochSeconds = System.currentTimeMillis() / 1000;
+            CurrentVelocityInterpolator.Result result =
+                    CurrentVelocityInterpolator.interpolateWithProgress(predictions, nowEpochSeconds);
+
+            CurrentListAdapter.CurrentProgress newProgress = result != null
+                    ? new CurrentListAdapter.CurrentProgress(
+                    result.velocityCmPerSec, result.progressFraction,
+                    result.upcomingType, result.upcomingEpochSeconds)
+                    : null;
+
+            if (isAdded()) {
+                requireActivity().runOnUiThread(() ->
+                        adapter.updateProgress(stationId, newProgress));
+            }
+        });
     }
 
-    /**
-     * Shows or hides the sync progress indicator.
-     */
+    private boolean hasCurrentTasksRunning() {
+        return syncManager.getScheduler()
+                .getRunningTasks()
+                .stream()
+                .anyMatch(t -> t instanceof FetchCurrentPredictionsTask);
+    }
+
     private void showSyncProgress(boolean show) {
         syncProgress.setVisibility(show ? View.VISIBLE : View.GONE);
     }
 
-    /**
-     * Updates the sync progress indicator and swipe-to-refresh state
-     * based on whether buoy tasks are still running.
-     */
     private void updateSyncState() {
-        boolean running = hasBuoyTasksRunning();
+        boolean running = hasCurrentTasksRunning();
         showSyncProgress(running);
         if (!running) {
             swipeRefresh.setRefreshing(false);
@@ -269,14 +265,14 @@ public class BuoyListFragment extends Fragment {
         @Override
         public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
             int position = viewHolder.getBindingAdapterPosition();
-            BuoyStation removed = adapter.getStationAt(position);
+            CurrentStation removed = adapter.getStationAt(position);
             adapter.removeAt(position);
-            userPreferences.removePreferredBuoyStation(removed.getId());
+            userPreferences.removePreferredCurrentStation(removed.id);
             updateEmptyState(adapter.getItemCount() == 0);
 
             Snackbar.make(requireView(), R.string.station_removed, Snackbar.LENGTH_LONG)
                     .setAction(R.string.undo, v -> {
-                        userPreferences.addPreferredBuoyStation(removed.getId());
+                        userPreferences.addPreferredCurrentStation(removed.id);
                         adapter.insertAt(position, removed);
                         updateEmptyState(false);
                     })

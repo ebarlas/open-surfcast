@@ -32,6 +32,7 @@ import org.opensurfcast.sync.SyncManager;
 import org.opensurfcast.tasks.TaskCooldowns;
 import org.opensurfcast.tasks.TaskScheduler;
 import org.opensurfcast.ui.BuoyListFragment;
+import org.opensurfcast.ui.CurrentListFragment;
 import org.opensurfcast.ui.LogListFragment;
 import org.opensurfcast.ui.SettingsFragment;
 import org.opensurfcast.ui.TideListFragment;
@@ -43,6 +44,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String TAG_BUOYS = "TAG_BUOYS";
     private static final String TAG_TIDES = "TAG_TIDES";
+    private static final String TAG_CURRENTS = "TAG_CURRENTS";
     private static final String TAG_LOGS = "TAG_LOGS";
     private static final String TAG_SETTINGS = "TAG_SETTINGS";
     private static final String KEY_CURRENT_TAG = "current_tag";
@@ -51,6 +53,8 @@ public class MainActivity extends AppCompatActivity {
     private BuoyStationDb buoyStationDb;
     private TideStationDb tideStationDb;
     private TidePredictionDb tidePredictionDb;
+    private CurrentStationDb currentStationDb;
+    private CurrentPredictionDb currentPredictionDb;
     private BuoyStdMetDataDb buoyStdMetDataDb;
     private BuoySpecWaveDataDb buoySpecWaveDataDb;
     private AsyncLogDb asyncLogDb;
@@ -98,6 +102,9 @@ public class MainActivity extends AppCompatActivity {
             } else if (id == R.id.nav_tides) {
                 switchToFragment(TAG_TIDES);
                 return true;
+            } else if (id == R.id.nav_currents) {
+                switchToFragment(TAG_CURRENTS);
+                return true;
             } else if (id == R.id.nav_logs) {
                 switchToFragment(TAG_LOGS);
                 return true;
@@ -143,6 +150,8 @@ public class MainActivity extends AppCompatActivity {
             fragment = new SettingsFragment();
         } else if (TAG_TIDES.equals(tag)) {
             fragment = new TideListFragment();
+        } else if (TAG_CURRENTS.equals(tag)) {
+            fragment = new CurrentListFragment();
         } else {
             fragment = new BuoyListFragment();
         }
@@ -161,11 +170,11 @@ public class MainActivity extends AppCompatActivity {
         dbHelper = new OpenSurfcastDbHelper(this);
         buoyStationDb = new BuoyStationDb(dbHelper);
         tideStationDb = new TideStationDb(dbHelper);
-        CurrentStationDb currentStationDb = new CurrentStationDb(dbHelper);
+        currentStationDb = new CurrentStationDb(dbHelper);
         buoyStdMetDataDb = new BuoyStdMetDataDb(dbHelper);
         buoySpecWaveDataDb = new BuoySpecWaveDataDb(dbHelper);
         tidePredictionDb = new TidePredictionDb(dbHelper);
-        CurrentPredictionDb currentPredictionDb = new CurrentPredictionDb(dbHelper);
+        currentPredictionDb = new CurrentPredictionDb(dbHelper);
 
         LogDb logDb = new LogDb(dbHelper);
         asyncLogDb = new AsyncLogDb(logDb, dbExecutor);
@@ -210,6 +219,20 @@ public class MainActivity extends AppCompatActivity {
      */
     public TidePredictionDb getTidePredictionDb() {
         return tidePredictionDb;
+    }
+
+    /**
+     * Returns the current station database for use by fragments.
+     */
+    public CurrentStationDb getCurrentStationDb() {
+        return currentStationDb;
+    }
+
+    /**
+     * Returns the current prediction database for use by fragments.
+     */
+    public CurrentPredictionDb getCurrentPredictionDb() {
+        return currentPredictionDb;
     }
 
     /**
