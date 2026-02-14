@@ -22,6 +22,7 @@ import org.opensurfcast.MainActivity;
 import org.opensurfcast.R;
 import org.opensurfcast.db.CurrentPredictionDb;
 import org.opensurfcast.db.CurrentStationDb;
+import org.opensurfcast.prefs.StationSortOrder;
 import org.opensurfcast.prefs.UserPreferences;
 import org.opensurfcast.sync.FetchCurrentPredictionsTask;
 import org.opensurfcast.sync.SyncManager;
@@ -187,6 +188,10 @@ public class CurrentListFragment extends Fragment {
 
             if (isAdded()) {
                 requireActivity().runOnUiThread(() -> {
+                    StationSortOrder sortOrder = userPreferences.getStationSortOrder();
+                    double homeLat = userPreferences.getHomeLatitude();
+                    double homeLon = userPreferences.getHomeLongitude();
+                    stations.sort(sortOrder.getComparator(homeLat, homeLon));
                     adapter.setUseMetric(userPreferences.isMetric());
                     adapter.submitList(stations, progressMap);
                     updateEmptyState(stations.isEmpty());

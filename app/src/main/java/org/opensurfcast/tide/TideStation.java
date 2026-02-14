@@ -1,5 +1,7 @@
 package org.opensurfcast.tide;
 
+import org.opensurfcast.station.LocatedStation;
+
 /**
  * Represents a NOAA CO-OPS tide prediction station.
  * Contains station metadata as returned by the CO-OPS Metadata API (MDAPI).
@@ -26,7 +28,7 @@ package org.opensurfcast.tide;
  * }
  * </pre>
  */
-public class TideStation {
+public class TideStation implements LocatedStation {
 
     /**
      * Station ID (id field) - Unique identifier for the station.
@@ -147,6 +149,26 @@ public class TideStation {
      * Only present in single station responses.
      */
     public Boolean greatLakes;
+
+    @Override
+    public String getDisplayName() {
+        return (name != null && !name.isEmpty()) ? name : (id != null ? id : "");
+    }
+
+    @Override
+    public String getId() {
+        return id != null ? id : "";
+    }
+
+    @Override
+    public double getLatitude() {
+        return latitude;
+    }
+
+    @Override
+    public double getLongitude() {
+        return longitude;
+    }
 
     /**
      * Returns true if this is a reference station (type "R").

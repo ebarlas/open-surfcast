@@ -36,6 +36,9 @@ public class UserPreferences {
     // Theme preference keys
     private static final String KEY_THEME_MODE = "theme_mode";
 
+    // Station sort order preference key
+    private static final String KEY_STATION_SORT_ORDER = "station_sort_order";
+
     // Sentinel value for unset coordinates
     private static final float COORDINATE_NOT_SET = Float.NaN;
 
@@ -367,6 +370,33 @@ public class UserPreferences {
      */
     public static void applyThemeMode(int mode) {
         AppCompatDelegate.setDefaultNightMode(mode);
+    }
+
+    // ========== Station Sort Order Preferences ==========
+
+    /**
+     * Returns the preferred sort order for station lists.
+     *
+     * @return sort order (default: ALPHABETICAL)
+     */
+    public StationSortOrder getStationSortOrder() {
+        int ordinal = prefs.getInt(KEY_STATION_SORT_ORDER, StationSortOrder.ALPHABETICAL.ordinal());
+        StationSortOrder[] values = StationSortOrder.values();
+        if (ordinal >= 0 && ordinal < values.length) {
+            return values[ordinal];
+        }
+        return StationSortOrder.ALPHABETICAL;
+    }
+
+    /**
+     * Persists the chosen station sort order.
+     *
+     * @param order sort order to save
+     */
+    public void setStationSortOrder(StationSortOrder order) {
+        prefs.edit()
+                .putInt(KEY_STATION_SORT_ORDER, order.ordinal())
+                .apply();
     }
 
     // ========== Utility Methods ==========

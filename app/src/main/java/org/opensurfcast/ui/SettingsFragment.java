@@ -22,6 +22,7 @@ import com.google.android.material.materialswitch.MaterialSwitch;
 import org.opensurfcast.MainActivity;
 import org.opensurfcast.R;
 import org.opensurfcast.db.TideStationDb;
+import org.opensurfcast.prefs.StationSortOrder;
 import org.opensurfcast.prefs.UserPreferences;
 import org.opensurfcast.tide.TideStation;
 
@@ -42,6 +43,7 @@ public class SettingsFragment extends Fragment {
     private ExecutorService dbExecutor;
 
     private MaterialButtonToggleGroup themeToggleGroup;
+    private MaterialButtonToggleGroup sortToggleGroup;
     private MaterialSwitch metricSwitch;
     private TextView metricSummary;
     private AutoCompleteTextView homeStationInput;
@@ -79,6 +81,18 @@ public class SettingsFragment extends Fragment {
             int mode = buttonIdToThemeMode(checkedId);
             userPreferences.setThemeMode(mode);
             UserPreferences.applyThemeMode(mode);
+        });
+
+        // --- Station sort order toggle ---
+        sortToggleGroup = view.findViewById(R.id.toggle_station_sort);
+
+        StationSortOrder savedSortOrder = userPreferences.getStationSortOrder();
+        sortToggleGroup.check(sortOrderToButtonId(savedSortOrder));
+
+        sortToggleGroup.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
+            if (!isChecked) return;
+            StationSortOrder order = buttonIdToSortOrder(checkedId);
+            userPreferences.setStationSortOrder(order);
         });
 
         // --- Home location selector ---
@@ -129,6 +143,10 @@ public class SettingsFragment extends Fragment {
             List<TideStation> stations = tideStationDb.queryAll();
             if (isAdded()) {
                 requireActivity().runOnUiThread(() -> {
+                    StationSortOrder sortOrder = userPreferences.getStationSortOrder();
+                    double homeLat = userPreferences.getHomeLatitude();
+                    double homeLon = userPreferences.getHomeLongitude();
+                    stations.sort(sortOrder.getComparator(homeLat, homeLon));
                     allStations = stations;
                     TideStationAdapter adapter = new TideStationAdapter(
                             requireContext(), allStations);
@@ -180,6 +198,31 @@ public class SettingsFragment extends Fragment {
             return AppCompatDelegate.MODE_NIGHT_YES;
         }
         return AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM;
+    }
+
+    /**
+     * Maps a {@link StationSortOrder} to the corresponding toggle button ID.
+     */
+    private int sortOrderToButtonId(StationSortOrder order) {
+        return switch (order) {
+            case ALPHABETICAL -> R.id.btn_sort_alphabetical;
+            case LATITUDINAL -> R.id.btn_sort_latitudinal;
+            case PROXIMAL -> R.id.btn_sort_proximal;
+        };
+    }
+
+    /**
+     * Maps a toggle-group button ID to the corresponding {@link StationSortOrder}.
+     */
+    private StationSortOrder buttonIdToSortOrder(int buttonId) {
+        if (buttonId == R.id.btn_sort_alphabetical) {
+            return StationSortOrder.ALPHABETICAL;
+        } else if (buttonId == R.id.btn_sort_latitudinal) {
+            return StationSortOrder.LATITUDINAL;
+        } else if (buttonId == R.id.btn_sort_proximal) {
+            return StationSortOrder.PROXIMAL;
+        }
+        return StationSortOrder.ALPHABETICAL;
     }
 
     // ========== Autocomplete Adapter ==========

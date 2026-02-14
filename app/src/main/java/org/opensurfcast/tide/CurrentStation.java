@@ -1,5 +1,7 @@
 package org.opensurfcast.tide;
 
+import org.opensurfcast.station.LocatedStation;
+
 /**
  * Represents a NOAA CO-OPS current prediction station.
  * Contains station metadata as returned by the CO-OPS Metadata API (MDAPI).
@@ -39,7 +41,7 @@ package org.opensurfcast.tide;
  * }
  * </pre>
  */
-public class CurrentStation {
+public class CurrentStation implements LocatedStation {
 
     /**
      * Station ID (id field) - Unique identifier for the station.
@@ -155,6 +157,26 @@ public class CurrentStation {
      * Harmonic constituents URL - URL to fetch harmonic constituents for this station.
      */
     public String harmonicConstituentsUrl;
+
+    @Override
+    public String getDisplayName() {
+        return (name != null && !name.isEmpty()) ? name : (id != null ? id : "");
+    }
+
+    @Override
+    public String getId() {
+        return id != null ? id : "";
+    }
+
+    @Override
+    public double getLatitude() {
+        return latitude;
+    }
+
+    @Override
+    public double getLongitude() {
+        return longitude;
+    }
 
     /**
      * Returns true if this is a reference station (type "R").

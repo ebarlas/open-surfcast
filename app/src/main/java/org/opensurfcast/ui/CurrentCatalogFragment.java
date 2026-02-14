@@ -20,6 +20,7 @@ import com.google.android.material.appbar.MaterialToolbar;
 import org.opensurfcast.MainActivity;
 import org.opensurfcast.R;
 import org.opensurfcast.db.CurrentStationDb;
+import org.opensurfcast.prefs.StationSortOrder;
 import org.opensurfcast.prefs.UserPreferences;
 import org.opensurfcast.sync.FetchCurrentStationsTask;
 import org.opensurfcast.sync.SyncManager;
@@ -140,6 +141,10 @@ public class CurrentCatalogFragment extends Fragment {
             List<CurrentStation> stations = currentStationDb.queryAll();
             if (isAdded()) {
                 requireActivity().runOnUiThread(() -> {
+                    StationSortOrder sortOrder = userPreferences.getStationSortOrder();
+                    double homeLat = userPreferences.getHomeLatitude();
+                    double homeLon = userPreferences.getHomeLongitude();
+                    stations.sort(sortOrder.getComparator(homeLat, homeLon));
                     allStations = stations;
                     Set<String> addedIds = userPreferences.getPreferredCurrentStations();
                     adapter.setAddedIds(addedIds);

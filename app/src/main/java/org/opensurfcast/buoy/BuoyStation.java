@@ -1,5 +1,7 @@
 package org.opensurfcast.buoy;
 
+import org.opensurfcast.station.LocatedStation;
+
 /**
  * Represents an NDBC (National Data Buoy Center) buoy station.
  * Contains station metadata as defined at:
@@ -14,7 +16,7 @@ package org.opensurfcast.buoy;
  *          type="fixed" met="y" currents="n" waterquality="n" dart="n"/&gt;
  * </pre>
  */
-public class BuoyStation {
+public class BuoyStation implements LocatedStation {
 
     /**
      * Station ID (id attribute) - WMO ID of the station.
@@ -136,6 +138,11 @@ public class BuoyStation {
 
     public String getName() {
         return name;
+    }
+
+    @Override
+    public String getDisplayName() {
+        return name != null && !name.isEmpty() ? name : (id != null ? id : "");
     }
 
     public void setName(String name) {

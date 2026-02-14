@@ -21,6 +21,7 @@ import org.opensurfcast.MainActivity;
 import org.opensurfcast.R;
 import org.opensurfcast.buoy.BuoyStation;
 import org.opensurfcast.db.BuoyStationDb;
+import org.opensurfcast.prefs.StationSortOrder;
 import org.opensurfcast.prefs.UserPreferences;
 import org.opensurfcast.sync.SyncManager;
 import org.opensurfcast.tasks.Task;
@@ -144,6 +145,10 @@ public class BuoyCatalogFragment extends Fragment {
             List<BuoyStation> stations = buoyStationDb.queryAll();
             if (isAdded()) {
                 requireActivity().runOnUiThread(() -> {
+                    StationSortOrder sortOrder = userPreferences.getStationSortOrder();
+                    double homeLat = userPreferences.getHomeLatitude();
+                    double homeLon = userPreferences.getHomeLongitude();
+                    stations.sort(sortOrder.getComparator(homeLat, homeLon));
                     allStations = stations;
                     Set<String> addedIds = userPreferences.getPreferredBuoyStations();
                     adapter.setAddedIds(addedIds);
