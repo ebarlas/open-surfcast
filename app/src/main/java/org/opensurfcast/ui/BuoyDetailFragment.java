@@ -659,7 +659,7 @@ public class BuoyDetailFragment extends Fragment {
         leftAxis.setDrawAxisLine(false);
         leftAxis.setAxisMinimum(0.5f);
         leftAxis.setAxisMaximum(4.5f);
-        leftAxis.setLabelCount(4, true);
+        leftAxis.setLabelCount(4, false);
         leftAxis.setGranularity(1f);
         leftAxis.setValueFormatter(new ValueFormatter() {
             @Override
@@ -940,8 +940,7 @@ public class BuoyDetailFragment extends Fragment {
         dataSet.setLineWidth(2f);
         dataSet.setDrawCircles(false);
         dataSet.setDrawValues(false);
-        dataSet.setMode(LineDataSet.Mode.CUBIC_BEZIER);
-        dataSet.setCubicIntensity(0.15f);
+        dataSet.setMode(LineDataSet.Mode.LINEAR);
         dataSet.setDrawFilled(true);
 
         // Fill with 15% alpha of the line color

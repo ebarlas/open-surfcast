@@ -57,7 +57,7 @@
             android:layout_marginEnd="8dp"
             android:valueFrom="1"
             android:valueTo="45"
-            android:value="45"
+            android:value="1"
             android:stepSize="1" />
 
         <TextView
