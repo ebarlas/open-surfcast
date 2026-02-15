@@ -1,5 +1,7 @@
 package org.opensurfcast.tasks;
 
+import org.opensurfcast.log.Logger;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -24,6 +26,7 @@ public class TaskScheduler {
     private final Map<String, Task> runningTasks;
     private final List<TaskListener> listeners;
     private final TaskCooldowns cooldowns;
+    private final Logger logger;
 
     /**
      * Creates a new task scheduler.
@@ -31,16 +34,19 @@ public class TaskScheduler {
      * @param executor              executor for running tasks in the background
      * @param mainThreadExecutor    consumer that posts runnables to the main thread
      * @param cooldowns             task cooldown manager
+     * @param logger                logger for lifecycle events
      */
     public TaskScheduler(
             ExecutorService executor,
             Consumer<Runnable> mainThreadExecutor,
-            TaskCooldowns cooldowns) {
+            TaskCooldowns cooldowns,
+            Logger logger) {
         this.executor = executor;
         this.mainThreadExecutor = mainThreadExecutor;
         this.runningTasks = new HashMap<>();
         this.listeners = new ArrayList<>();
         this.cooldowns = cooldowns;
+        this.logger = logger;
     }
 
     /**
@@ -60,15 +66,16 @@ public class TaskScheduler {
         String key = task.getKey();
 
         if (runningTasks.containsKey(key)) {
-            // Already running, ignore
+            logger.debug("Task ignored (already running): " + key);
             return;
         }
 
         if (cooldowns.isOnCooldown(task)) {
-            // Still on cooldown, ignore
+            logger.debug("Task ignored (on cooldown): " + key);
             return;
         }
 
+        logger.debug("Task submitted: " + key);
         runningTasks.put(key, task);
         notifyTaskStarted(task);
 
@@ -78,6 +85,7 @@ public class TaskScheduler {
             try {
                 task.run();
             } catch (Exception e) {
+                logger.error("Task failed: " + key, e);
                 error = e;
             }
 
@@ -150,12 +158,14 @@ public class TaskScheduler {
     }
 
     private void notifyTaskStarted(Task task) {
+        logger.debug("Task started: " + task.getKey());
         for (TaskListener listener : listeners) {
             listener.onTaskStarted(task);
         }
     }
 
     private void notifyTaskCompleted(Task task) {
+        logger.debug("Task completed: " + task.getKey());
         for (TaskListener listener : listeners) {
             listener.onTaskCompleted(task);
         }
@@ -174,6 +184,7 @@ public class TaskScheduler {
      * After shutdown, no new tasks can be submitted.
      */
     public void shutdown() {
+        logger.debug("TaskScheduler shutdown");
         executor.shutdown();
     }
 }

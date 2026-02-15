@@ -1,5 +1,6 @@
 package org.opensurfcast.tasks;
 
+import org.opensurfcast.log.Logger;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -24,7 +25,7 @@ public class TaskSchedulerTest {
     public void setUp() {
         executor = Executors.newSingleThreadExecutor();
         cooldowns = new StubCooldowns();
-        scheduler = new TaskScheduler(executor, Runnable::run, cooldowns);
+        scheduler = new TaskScheduler(executor, Runnable::run, cooldowns, NoOpLogger.INSTANCE);
         listener = new RecordingListener();
         scheduler.addListener(listener);
     }
@@ -110,6 +111,25 @@ public class TaskSchedulerTest {
     }
 
     // Test doubles
+
+    static class NoOpLogger implements Logger {
+        static final NoOpLogger INSTANCE = new NoOpLogger();
+
+        @Override
+        public void debug(String message) {}
+
+        @Override
+        public void info(String message) {}
+
+        @Override
+        public void warn(String message) {}
+
+        @Override
+        public void error(String message) {}
+
+        @Override
+        public void error(String message, Throwable throwable) {}
+    }
 
     static class TestTask extends BaseTask {
         volatile boolean executed = false;

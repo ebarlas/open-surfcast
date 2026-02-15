@@ -184,7 +184,7 @@ public class MainActivity extends AppCompatActivity {
         HttpCache httpCache = new HttpCache(this);
 
         TaskCooldowns cooldowns = new TaskCooldowns(this);
-        taskScheduler = new TaskScheduler(executorService, mainHandler::post, cooldowns);
+        taskScheduler = new TaskScheduler(executorService, mainHandler::post, cooldowns, logger);
 
         syncManager = new SyncManager(
                 taskScheduler,
