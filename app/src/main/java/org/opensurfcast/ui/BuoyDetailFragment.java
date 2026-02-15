@@ -41,6 +41,7 @@ import org.opensurfcast.MainActivity;
 import org.opensurfcast.R;
 import org.opensurfcast.buoy.BuoySpecWaveData;
 import org.opensurfcast.buoy.BuoyStation;
+import org.opensurfcast.buoy.HasEpochSeconds;
 import org.opensurfcast.buoy.BuoyStdMetData;
 import org.opensurfcast.db.BuoySpecWaveDataDb;
 import org.opensurfcast.db.BuoyStationDb;
@@ -64,6 +65,9 @@ import java.util.function.Function;
 public class BuoyDetailFragment extends Fragment {
 
     private static final String ARG_STATION_ID = "station_id";
+    /** Lookback window in seconds for plots and visualizations (1 day). */
+    private static final long LOOKBACK_SECONDS = 86400L;
+
     private static final double METERS_TO_FEET = 3.28084;
     private static final double FEET_TO_METERS = 0.3048;
     private static final double MPS_TO_MPH = 2.23694;
@@ -139,6 +143,10 @@ public class BuoyDetailFragment extends Fragment {
             List<BuoyStdMetData> stdMetList = buoyStdMetDataDb.queryByStation(stationId);
             List<BuoySpecWaveData> specWaveList = buoySpecWaveDataDb.queryByStation(stationId);
 
+            long cutoff = System.currentTimeMillis() / 1000L - LOOKBACK_SECONDS;
+            final List<BuoyStdMetData> filteredStdMet = filterByLookback(stdMetList, cutoff);
+            final List<BuoySpecWaveData> filteredSpecWave = filterByLookback(specWaveList, cutoff);
+
             if (isAdded()) {
                 requireActivity().runOnUiThread(() -> {
                     loadingProgress.setVisibility(View.GONE);
@@ -150,16 +158,29 @@ public class BuoyDetailFragment extends Fragment {
                     }
 
                     boolean useMetric = userPreferences.isMetric();
-                    buildStdMetSection(stdMetList, useMetric);
-                    buildSpecWaveSection(specWaveList, useMetric);
+                    buildStdMetSection(filteredStdMet, useMetric);
+                    buildSpecWaveSection(filteredSpecWave, useMetric);
 
                     // Show empty state if both lists are empty
-                    if (stdMetList.isEmpty() && specWaveList.isEmpty()) {
+                    if (filteredStdMet.isEmpty() && filteredSpecWave.isEmpty()) {
                         addEmptyState();
                     }
                 });
             }
         });
+    }
+
+    /**
+     * Filters data to only include entries within the lookback window.
+     *
+     * @param dataList list of items with epoch timestamps
+     * @param cutoff   minimum epoch seconds (inclusive)
+     * @return filtered list containing only items with epochSeconds >= cutoff
+     */
+    private <T extends HasEpochSeconds> List<T> filterByLookback(List<T> dataList, long cutoff) {
+        return dataList.stream()
+                .filter(d -> d.getEpochSeconds() >= cutoff)
+                .toList();
     }
 
     // ========================================================================

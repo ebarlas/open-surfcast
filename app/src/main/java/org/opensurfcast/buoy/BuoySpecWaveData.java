@@ -17,7 +17,7 @@ package org.opensurfcast.buoy;
  * #yr  mo dy hr mn    m    m  sec    m  sec  -  degT     -      sec degT
  * </pre>
  */
-public class BuoySpecWaveData {
+public class BuoySpecWaveData implements HasEpochSeconds {
 
     /**
      * Year of observation (YY) - Four-digit year.
