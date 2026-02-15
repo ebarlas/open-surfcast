@@ -40,8 +40,8 @@
     <string name="tide_level_metric">%.1f m</string>
     <string name="tide_level_imperial">%.1f ft</string>
     <string name="tide_level_unknown">—</string>
-    <string name="tide_upcoming_metric">Next: %.1f m</string>
-    <string name="tide_upcoming_imperial">Next: %.1f ft</string>
+    <string name="tide_upcoming_metric">%.1f m</string>
+    <string name="tide_upcoming_imperial">%.1f ft</string>
     <string name="tide_upcoming_high">High tide</string>
     <string name="tide_upcoming_low">Low tide</string>
     <string name="tide_upcoming_time_today">@ %s</string>
@@ -70,9 +70,10 @@
     <string name="current_velocity_metric">%.1f cm/s</string>
     <string name="current_velocity_imperial">%.1f kn</string>
     <string name="current_velocity_unknown">\u2014</string>
-    <string name="current_upcoming_flood">Next: Max Flood</string>
-    <string name="current_upcoming_ebb">Next: Max Ebb</string>
-    <string name="current_upcoming_slack">Next: Slack</string>
+    <string name="current_upcoming_flood">Max Flood</string>
+    <string name="current_upcoming_ebb">Max Ebb</string>
+    <string name="current_upcoming_metric">%.1f cm/s</string>
+    <string name="current_upcoming_imperial">%.1f kn</string>
     <string name="current_upcoming_time">@ %s</string>
     <string name="empty_current_list">No current stations added yet</string>
     <string name="empty_current_list_hint">Tap + to browse the catalog</string>
