@@ -11,6 +11,7 @@ import android.view.animation.Animation;
 import android.view.animation.DecelerateInterpolator;
 import android.view.animation.ScaleAnimation;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -55,13 +56,15 @@ public class CurrentListAdapter extends RecyclerView.Adapter<CurrentListAdapter.
     /**
      * Holds interpolated velocity, progress fraction, and upcoming event.
      *
-     * @param velocityCmPerSec       Current velocity in cm/s.
-     * @param progressFraction       Progress in current cycle: 0 = slack, 1 = peak.
-     * @param upcomingType           Type of the upcoming event ("flood", "ebb", or "slack").
-     * @param upcomingEpochSeconds   Epoch seconds of the upcoming event.
+     * @param velocityCmPerSec           Current velocity in cm/s.
+     * @param progressFraction           Progress between peaks: 0 = previous peak, 1 = next peak.
+     * @param upcomingType               Type of the upcoming event ("flood" or "ebb").
+     * @param upcomingVelocityCmPerSec   Velocity of the upcoming event in cm/s.
+     * @param upcomingEpochSeconds       Epoch seconds of the upcoming event.
      */
     public record CurrentProgress(double velocityCmPerSec, float progressFraction,
-                                  String upcomingType, long upcomingEpochSeconds) {
+                                  String upcomingType, double upcomingVelocityCmPerSec,
+                                  long upcomingEpochSeconds) {
     }
 
     private final List<CurrentStation> stations = new ArrayList<>();
@@ -205,6 +208,7 @@ public class CurrentListAdapter extends RecyclerView.Adapter<CurrentListAdapter.
         private final TextView currentVelocity;
         private final LinearLayout upcomingEventRow;
         private final TextView upcomingEventLabel;
+        private final ImageView upcomingEventIndicator;
         private final TextView upcomingEventTime;
         private final FrameLayout currentBarTrack;
         private final View currentBarFill;
@@ -215,6 +219,7 @@ public class CurrentListAdapter extends RecyclerView.Adapter<CurrentListAdapter.
             currentVelocity = itemView.findViewById(R.id.current_velocity);
             upcomingEventRow = itemView.findViewById(R.id.upcoming_event_row);
             upcomingEventLabel = itemView.findViewById(R.id.upcoming_event_label);
+            upcomingEventIndicator = itemView.findViewById(R.id.upcoming_event_indicator);
             upcomingEventTime = itemView.findViewById(R.id.upcoming_event_time);
             currentBarTrack = itemView.findViewById(R.id.current_bar_track);
             currentBarFill = itemView.findViewById(R.id.current_bar_fill);
@@ -237,8 +242,8 @@ public class CurrentListAdapter extends RecyclerView.Adapter<CurrentListAdapter.
 
             // Current velocity
             if (progress != null) {
-                double speed = Math.abs(progress.velocityCmPerSec);
-                double displayValue = useMetric ? speed : speed * CM_PER_SEC_TO_KNOTS;
+                double displayValue = useMetric ? progress.velocityCmPerSec
+                        : progress.velocityCmPerSec * CM_PER_SEC_TO_KNOTS;
                 int formatRes = useMetric ? R.string.current_velocity_metric
                         : R.string.current_velocity_imperial;
                 currentVelocity.setText(String.format(Locale.US,
@@ -249,17 +254,25 @@ public class CurrentListAdapter extends RecyclerView.Adapter<CurrentListAdapter.
                 currentVelocity.setVisibility(View.VISIBLE);
             }
 
-            // Upcoming event (next flood, ebb, or slack)
+            // Upcoming event (next flood or ebb): <magnitude> <arrow> <date>
             if (progress != null) {
-                int labelRes;
-                if (CurrentPrediction.TYPE_FLOOD.equals(progress.upcomingType)) {
-                    labelRes = R.string.current_upcoming_flood;
-                } else if (CurrentPrediction.TYPE_EBB.equals(progress.upcomingType)) {
-                    labelRes = R.string.current_upcoming_ebb;
-                } else {
-                    labelRes = R.string.current_upcoming_slack;
-                }
-                upcomingEventLabel.setText(labelRes);
+                boolean isFlood = CurrentPrediction.TYPE_FLOOD.equals(progress.upcomingType);
+
+                double upcomingDisplay = useMetric ? progress.upcomingVelocityCmPerSec
+                        : progress.upcomingVelocityCmPerSec * CM_PER_SEC_TO_KNOTS;
+                int formatRes = useMetric ? R.string.current_upcoming_metric
+                        : R.string.current_upcoming_imperial;
+                upcomingEventLabel.setText(String.format(Locale.US,
+                        itemView.getContext().getString(formatRes), upcomingDisplay));
+
+                upcomingEventIndicator.setImageResource(isFlood
+                        ? R.drawable.ic_tide_high : R.drawable.ic_tide_low);
+                upcomingEventIndicator.setContentDescription(isFlood
+                        ? itemView.getContext().getString(R.string.current_upcoming_flood)
+                        : itemView.getContext().getString(R.string.current_upcoming_ebb));
+                upcomingEventIndicator.setColorFilter(MaterialColors.getColor(itemView,
+                        isFlood ? com.google.android.material.R.attr.colorPrimary
+                                : com.google.android.material.R.attr.colorTertiary));
 
                 upcomingEventTime.setText(formatUpcomingTime(progress.upcomingEpochSeconds));
                 upcomingEventTime.setVisibility(View.VISIBLE);

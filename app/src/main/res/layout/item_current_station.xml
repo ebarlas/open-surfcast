@@ -72,6 +72,13 @@
                 android:textAppearance="?attr/textAppearanceBodySmall"
                 android:textColor="?attr/colorOnSurfaceVariant" />
 
+            <ImageView
+                android:id="@+id/upcoming_event_indicator"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:layout_marginStart="4dp"
+                android:contentDescription="@string/current_upcoming_flood" />
+
             <TextView
                 android:id="@+id/upcoming_event_time"
                 android:layout_width="wrap_content"

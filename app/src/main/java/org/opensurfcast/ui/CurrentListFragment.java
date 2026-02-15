@@ -182,7 +182,8 @@ public class CurrentListFragment extends Fragment {
                 if (result != null) {
                     progressMap.put(station.id, new CurrentListAdapter.CurrentProgress(
                             result.velocityCmPerSec, result.progressFraction,
-                            result.upcomingType, result.upcomingEpochSeconds));
+                            result.upcomingType, result.upcomingVelocityCmPerSec,
+                            result.upcomingEpochSeconds));
                 }
             }
 
@@ -222,7 +223,8 @@ public class CurrentListFragment extends Fragment {
             CurrentListAdapter.CurrentProgress newProgress = result != null
                     ? new CurrentListAdapter.CurrentProgress(
                     result.velocityCmPerSec, result.progressFraction,
-                    result.upcomingType, result.upcomingEpochSeconds)
+                    result.upcomingType, result.upcomingVelocityCmPerSec,
+                    result.upcomingEpochSeconds)
                     : null;
 
             if (isAdded()) {

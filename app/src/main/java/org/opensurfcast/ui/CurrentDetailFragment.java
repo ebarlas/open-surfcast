@@ -258,13 +258,8 @@ public class CurrentDetailFragment extends Fragment {
                             : pred.velocityMajor * CM_PER_SEC_TO_KNOTS;
                     ebbEntries.add(new Entry(pred.epochSeconds, (float) displayValue));
                 } else if (pred.isSlack()) {
-                    // Plot slack at the interpolated curve value at this time,
-                    // since the curve (anchored on flood/ebb only) won't hit zero exactly here
-                    Double interpVelocity = CurrentVelocityInterpolator.interpolate(
-                            allPredictions, pred.epochSeconds);
-                    double yValue = interpVelocity != null ? interpVelocity : 0.0;
-                    double displayValue = useMetric ? yValue : yValue * CM_PER_SEC_TO_KNOTS;
-                    slackEntries.add(new Entry(pred.epochSeconds, (float) displayValue));
+                    // Curve now passes through zero exactly at slack time
+                    slackEntries.add(new Entry(pred.epochSeconds, 0f));
                 }
             }
         }
