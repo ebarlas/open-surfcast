@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Tide/current arrow indicator: green for up (dark theme) -->
+    <color name="tide_indicator_up">#81C784</color>   <!-- Material Green 300 -->
+
     <!-- Wave period bar colors (dark theme) -->
     <color name="wave_period_calm">#CBD5E1</color>
     <color name="wave_period_small">#93C5FD</color>

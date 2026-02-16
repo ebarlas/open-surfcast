@@ -16,6 +16,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.color.MaterialColors;
@@ -270,9 +271,10 @@ public class CurrentListAdapter extends RecyclerView.Adapter<CurrentListAdapter.
                 upcomingEventIndicator.setContentDescription(isFlood
                         ? itemView.getContext().getString(R.string.current_upcoming_flood)
                         : itemView.getContext().getString(R.string.current_upcoming_ebb));
-                upcomingEventIndicator.setColorFilter(MaterialColors.getColor(itemView,
-                        isFlood ? com.google.android.material.R.attr.colorPrimary
-                                : com.google.android.material.R.attr.colorTertiary));
+                int arrowColor = isFlood
+                        ? ContextCompat.getColor(itemView.getContext(), R.color.tide_indicator_up)
+                        : MaterialColors.getColor(itemView, com.google.android.material.R.attr.colorError);
+                upcomingEventIndicator.setColorFilter(arrowColor);
 
                 upcomingEventTime.setText(formatUpcomingTime(progress.upcomingEpochSeconds));
                 upcomingEventTime.setVisibility(View.VISIBLE);

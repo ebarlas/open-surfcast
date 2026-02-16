@@ -16,6 +16,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.color.MaterialColors;
@@ -262,10 +263,10 @@ public class TideListAdapter extends RecyclerView.Adapter<TideListAdapter.ViewHo
                 upcomingTideIndicator.setContentDescription(progress.upcomingTideIsHigh
                         ? itemView.getContext().getString(R.string.tide_upcoming_high)
                         : itemView.getContext().getString(R.string.tide_upcoming_low));
-                upcomingTideIndicator.setColorFilter(MaterialColors.getColor(itemView,
-                        progress.upcomingTideIsHigh
-                                ? com.google.android.material.R.attr.colorPrimary
-                                : com.google.android.material.R.attr.colorTertiary));
+                int arrowColor = progress.upcomingTideIsHigh
+                        ? ContextCompat.getColor(itemView.getContext(), R.color.tide_indicator_up)
+                        : MaterialColors.getColor(itemView, com.google.android.material.R.attr.colorError);
+                upcomingTideIndicator.setColorFilter(arrowColor);
 
                 // Compact upcoming tide time
                 upcomingTideTime.setText(formatUpcomingTime(

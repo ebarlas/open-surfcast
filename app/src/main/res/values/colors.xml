@@ -108,6 +108,9 @@
     <color name="ocean_primary">#FF0D47A1</color>
     <color name="ocean_secondary">#FF00897B</color>
 
+    <!-- Tide/current arrow indicator: green for up (Material 3 success/positive) -->
+    <color name="tide_indicator_up">#2E7D32</color>   <!-- Material Green 800 -->
+
     <!-- Wave period bar colors (light theme) -->
     <color name="wave_period_calm">#94A3B8</color>
     <color name="wave_period_small">#60A5FA</color>
