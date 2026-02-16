@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Task to fetch the buoy station catalog from NDBC.
@@ -51,7 +52,7 @@ public class FetchBuoyStationsTask extends BaseTask {
             List<BuoyStation> stations = result.value();
             List<BuoyStation> retained = stations.stream()
                     .filter(station -> ids.contains(station.getId()))
-                    .toList();
+                    .collect(Collectors.toList());
             logger.info("Fetched " + stations.size() + " buoy stations and retained " + retained.size() + " (" + elapsed + "ms)");
             Timer t = new Timer();
             stationDb.replaceAll(retained);

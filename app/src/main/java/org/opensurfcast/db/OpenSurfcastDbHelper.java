@@ -27,7 +27,7 @@ public class OpenSurfcastDbHelper extends SQLiteOpenHelper {
     public static final String TABLE_CURRENT_PREDICTION = "current_prediction";
     public static final String TABLE_LOG = "logs";
 
-    private static final String CREATE_BUOY_STATION = """
+    private static final String CREATE_BUOY_STATION = String.format("""
             CREATE TABLE %s (
                 id TEXT PRIMARY KEY,
                 latitude REAL NOT NULL,
@@ -42,9 +42,9 @@ public class OpenSurfcastDbHelper extends SQLiteOpenHelper {
                 has_water_quality INTEGER NOT NULL,
                 has_dart INTEGER NOT NULL
             )
-            """.formatted(TABLE_BUOY_STATION);
+            """, TABLE_BUOY_STATION);
 
-    private static final String CREATE_TIDE_STATION = """
+    private static final String CREATE_TIDE_STATION = String.format("""
             CREATE TABLE %s (
                 id TEXT PRIMARY KEY,
                 name TEXT,
@@ -63,9 +63,9 @@ public class OpenSurfcastDbHelper extends SQLiteOpenHelper {
                 tidal INTEGER,
                 great_lakes INTEGER
             )
-            """.formatted(TABLE_TIDE_STATION);
+            """, TABLE_TIDE_STATION);
 
-    private static final String CREATE_CURRENT_STATION = """
+    private static final String CREATE_CURRENT_STATION = String.format("""
             CREATE TABLE %s (
                 id TEXT PRIMARY KEY,
                 name TEXT,
@@ -84,9 +84,9 @@ public class OpenSurfcastDbHelper extends SQLiteOpenHelper {
                 current_prediction_offsets_url TEXT,
                 harmonic_constituents_url TEXT
             )
-            """.formatted(TABLE_CURRENT_STATION);
+            """, TABLE_CURRENT_STATION);
 
-    private static final String CREATE_BUOY_SPEC_WAVE_DATA = """
+    private static final String CREATE_BUOY_SPEC_WAVE_DATA = String.format("""
             CREATE TABLE %s (
                 id TEXT NOT NULL,
                 epoch_seconds INTEGER NOT NULL,
@@ -108,9 +108,9 @@ public class OpenSurfcastDbHelper extends SQLiteOpenHelper {
                 PRIMARY KEY (id, epoch_seconds),
                 FOREIGN KEY (id) REFERENCES %s(id) ON DELETE CASCADE
             )
-            """.formatted(TABLE_BUOY_SPEC_WAVE_DATA, TABLE_BUOY_STATION);
+            """, TABLE_BUOY_SPEC_WAVE_DATA, TABLE_BUOY_STATION);
 
-    private static final String CREATE_BUOY_STD_MET_DATA = """
+    private static final String CREATE_BUOY_STD_MET_DATA = String.format("""
             CREATE TABLE %s (
                 id TEXT NOT NULL,
                 epoch_seconds INTEGER NOT NULL,
@@ -136,9 +136,9 @@ public class OpenSurfcastDbHelper extends SQLiteOpenHelper {
                 PRIMARY KEY (id, epoch_seconds),
                 FOREIGN KEY (id) REFERENCES %s(id) ON DELETE CASCADE
             )
-            """.formatted(TABLE_BUOY_STD_MET_DATA, TABLE_BUOY_STATION);
+            """, TABLE_BUOY_STD_MET_DATA, TABLE_BUOY_STATION);
 
-    private static final String CREATE_TIDE_PREDICTION = """
+    private static final String CREATE_TIDE_PREDICTION = String.format("""
             CREATE TABLE %s (
                 id TEXT NOT NULL,
                 epoch_seconds INTEGER NOT NULL,
@@ -148,9 +148,9 @@ public class OpenSurfcastDbHelper extends SQLiteOpenHelper {
                 PRIMARY KEY (id, epoch_seconds),
                 FOREIGN KEY (id) REFERENCES %s(id) ON DELETE CASCADE
             )
-            """.formatted(TABLE_TIDE_PREDICTION, TABLE_TIDE_STATION);
+            """, TABLE_TIDE_PREDICTION, TABLE_TIDE_STATION);
 
-    private static final String CREATE_CURRENT_PREDICTION = """
+    private static final String CREATE_CURRENT_PREDICTION = String.format("""
             CREATE TABLE %s (
                 id TEXT NOT NULL,
                 epoch_seconds INTEGER NOT NULL,
@@ -164,9 +164,9 @@ public class OpenSurfcastDbHelper extends SQLiteOpenHelper {
                 PRIMARY KEY (id, epoch_seconds),
                 FOREIGN KEY (id) REFERENCES %s(id) ON DELETE CASCADE
             )
-            """.formatted(TABLE_CURRENT_PREDICTION, TABLE_CURRENT_STATION);
+            """, TABLE_CURRENT_PREDICTION, TABLE_CURRENT_STATION);
 
-    private static final String CREATE_LOG = """
+    private static final String CREATE_LOG = String.format("""
             CREATE TABLE %s (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 timestamp INTEGER NOT NULL,
@@ -174,7 +174,7 @@ public class OpenSurfcastDbHelper extends SQLiteOpenHelper {
                 message TEXT NOT NULL,
                 stack_trace TEXT
             )
-            """.formatted(TABLE_LOG);
+            """, TABLE_LOG);
 
     public OpenSurfcastDbHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);

@@ -181,7 +181,7 @@ public class BuoyDetailFragment extends Fragment {
     private <T extends HasEpochSeconds> List<T> filterByLookback(List<T> dataList, long cutoff) {
         return dataList.stream()
                 .filter(d -> d.getEpochSeconds() >= cutoff)
-                .toList();
+                .collect(java.util.stream.Collectors.toList());
     }
 
     // ========================================================================

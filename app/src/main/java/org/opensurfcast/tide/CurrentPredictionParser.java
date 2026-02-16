@@ -6,7 +6,8 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
+
+import org.opensurfcast.io.IoUtils;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -82,7 +83,7 @@ public class CurrentPredictionParser {
      * @throws IOException if an error occurs during parsing
      */
     public static List<CurrentPrediction> parse(InputStream inputStream) throws IOException {
-        String json = readStream(inputStream);
+        String json = IoUtils.readStreamToString(inputStream);
         return parse(json);
     }
 
@@ -163,11 +164,5 @@ public class CurrentPredictionParser {
         return Double.isNaN(value) ? null : value;
     }
 
-    /**
-     * Reads the entire input stream into a String.
-     */
-    private static String readStream(InputStream inputStream) throws IOException {
-        return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
-    }
 }
 

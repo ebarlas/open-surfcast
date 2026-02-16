@@ -6,7 +6,8 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
+
+import org.opensurfcast.io.IoUtils;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -81,7 +82,7 @@ public class CurrentStationParser {
      * @throws IOException if an error occurs during parsing
      */
     public static List<CurrentStation> parseStationList(InputStream inputStream) throws IOException {
-        String json = readStream(inputStream);
+        String json = IoUtils.readStreamToString(inputStream);
         return parseStationList(json);
     }
 
@@ -181,11 +182,5 @@ public class CurrentStationParser {
         return Double.isNaN(value) ? null : value;
     }
 
-    /**
-     * Reads the entire input stream into a String.
-     */
-    private static String readStream(InputStream inputStream) throws IOException {
-        return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
-    }
 }
 
