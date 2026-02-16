@@ -3,6 +3,7 @@ package org.opensurfcast;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.View;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.NonNull;
@@ -285,6 +286,14 @@ public class MainActivity extends AppCompatActivity {
      */
     public ExecutorService getDbExecutor() {
         return dbExecutor;
+    }
+
+    /**
+     * Shows or hides the bottom navigation bar.
+     * Used by detail fragments to reclaim screen space in landscape.
+     */
+    public void setBottomNavigationVisible(boolean visible) {
+        bottomNavigation.setVisibility(visible ? View.VISIBLE : View.GONE);
     }
 
     /**

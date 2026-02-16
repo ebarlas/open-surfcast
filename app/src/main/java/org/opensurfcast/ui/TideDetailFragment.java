@@ -1,16 +1,21 @@
 package org.opensurfcast.ui;
 
+import android.content.res.Configuration;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.fragment.app.Fragment;
 
 import com.github.mikephil.charting.charts.CombinedChart;
@@ -95,6 +100,9 @@ public class TideDetailFragment extends Fragment {
     /** Station ID kept as field for reference. */
     private String stationId;
 
+    /** Whether the fragment is in landscape immersive mode. */
+    private boolean immersiveMode;
+
     // ========================================================================
     // Factory
     // ========================================================================
@@ -175,6 +183,50 @@ public class TideDetailFragment extends Fragment {
         stationId = requireArguments().getString(ARG_STATION_ID);
 
         loadData(stationId);
+
+        if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            enterImmersiveMode(view);
+        }
+    }
+
+    @Override
+    public void onDestroyView() {
+        if (immersiveMode) {
+            exitImmersiveMode();
+        }
+        super.onDestroyView();
+    }
+
+    // ========================================================================
+    // Immersive mode
+    // ========================================================================
+
+    private void enterImmersiveMode(View view) {
+        immersiveMode = true;
+
+        ((View) toolbar.getParent()).setVisibility(View.GONE);
+        view.findViewById(R.id.window_size_row).setVisibility(View.GONE);
+        view.findViewById(R.id.center_date_row).setVisibility(View.GONE);
+        loadingProgress.setVisibility(View.GONE);
+
+        ((MainActivity) requireActivity()).setBottomNavigationVisible(false);
+
+        Window window = requireActivity().getWindow();
+        WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(window, view);
+        controller.hide(WindowInsetsCompat.Type.systemBars());
+        controller.setSystemBarsBehavior(
+                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+    }
+
+    private void exitImmersiveMode() {
+        if (getActivity() == null) return;
+
+        ((MainActivity) requireActivity()).setBottomNavigationVisible(true);
+
+        Window window = requireActivity().getWindow();
+        WindowInsetsControllerCompat controller =
+                WindowCompat.getInsetsController(window, window.getDecorView());
+        controller.show(WindowInsetsCompat.Type.systemBars());
     }
 
     // ========================================================================
