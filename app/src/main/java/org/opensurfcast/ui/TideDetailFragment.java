@@ -312,6 +312,8 @@ public class TideDetailFragment extends Fragment {
         enableTouchControls(chart);
         chart.setDrawGridBackground(false);
         chart.setBackgroundColor(Color.TRANSPARENT);
+        chart.setMaxVisibleValueCount(Integer.MAX_VALUE);
+        chart.setExtraTopOffset(12f);
         chart.setExtraBottomOffset(8f);
         chart.setExtraLeftOffset(4f);
         chart.setExtraRightOffset(4f);
@@ -326,13 +328,26 @@ public class TideDetailFragment extends Fragment {
             combinedData.setData(lineData);
         }
 
-        // Add scatter data (tide shift markers)
+        // Add scatter data (tide shift markers) with optional labels
         ScatterData scatterData = new ScatterData();
         boolean hasScatter = false;
+        String unit = useMetric ? "m" : "ft";
+        boolean showLabels = userPreferences.isShowChartLabels();
 
         if (!highTideEntries.isEmpty()) {
             int highColor = resolveColor(com.google.android.material.R.attr.colorPrimary);
             ScatterDataSet highSet = createScatterDataSet(highTideEntries, "", highColor);
+            if (showLabels) {
+                highSet.setDrawValues(true);
+                highSet.setValueTextSize(9f);
+                highSet.setValueTextColor(highColor);
+                highSet.setValueFormatter(new ValueFormatter() {
+                    @Override
+                    public String getPointLabel(Entry entry) {
+                        return formatValue(entry.getY()) + " " + unit;
+                    }
+                });
+            }
             scatterData.addDataSet(highSet);
             hasScatter = true;
         }
@@ -340,6 +355,17 @@ public class TideDetailFragment extends Fragment {
         if (!lowTideEntries.isEmpty()) {
             int lowColor = resolveColor(com.google.android.material.R.attr.colorTertiary);
             ScatterDataSet lowSet = createScatterDataSet(lowTideEntries, "", lowColor);
+            if (showLabels) {
+                lowSet.setDrawValues(true);
+                lowSet.setValueTextSize(9f);
+                lowSet.setValueTextColor(lowColor);
+                lowSet.setValueFormatter(new ValueFormatter() {
+                    @Override
+                    public String getPointLabel(Entry entry) {
+                        return formatValue(entry.getY()) + " " + unit;
+                    }
+                });
+            }
             scatterData.addDataSet(lowSet);
             hasScatter = true;
         }
@@ -358,7 +384,6 @@ public class TideDetailFragment extends Fragment {
         addCurrentTimeLine(chart);
         configureYAxis(chart);
 
-        String unit = useMetric ? "m" : "ft";
         attachMarker(chart, createValueMarker(unit));
 
         chart.invalidate();

@@ -121,6 +121,10 @@
     <string name="settings_home_station_hint">Search tide stations</string>
     <string name="settings_home_station_summary">%1$s, %2$s</string>
     <string name="settings_home_station_none">No station selected</string>
+    <string name="settings_charts_header">Charts</string>
+    <string name="settings_show_chart_labels_title">Show chart labels</string>
+    <string name="settings_show_chart_labels_summary_on">Tide and current values shown on chart markers</string>
+    <string name="settings_show_chart_labels_summary_off">Chart markers shown without value labels</string>
 
     <!-- Log list -->
     <string name="log_list_title">Logs</string>

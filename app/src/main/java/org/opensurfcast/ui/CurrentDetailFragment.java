@@ -321,6 +321,8 @@ public class CurrentDetailFragment extends Fragment {
         enableTouchControls(chart);
         chart.setDrawGridBackground(false);
         chart.setBackgroundColor(Color.TRANSPARENT);
+        chart.setMaxVisibleValueCount(Integer.MAX_VALUE);
+        chart.setExtraTopOffset(12f);
         chart.setExtraBottomOffset(8f);
         chart.setExtraLeftOffset(4f);
         chart.setExtraRightOffset(4f);
@@ -335,13 +337,26 @@ public class CurrentDetailFragment extends Fragment {
             combinedData.setData(lineData);
         }
 
-        // Add scatter data (max-flood, max-ebb, and slack markers)
+        // Add scatter data (max-flood, max-ebb, and slack markers) with optional labels
         ScatterData scatterData = new ScatterData();
         boolean hasScatter = false;
+        String unit = useMetric ? "cm/s" : "kn";
+        boolean showLabels = userPreferences.isShowChartLabels();
 
         if (!floodEntries.isEmpty()) {
             int floodColor = resolveColor(com.google.android.material.R.attr.colorPrimary);
             ScatterDataSet floodSet = createScatterDataSet(floodEntries, "", floodColor);
+            if (showLabels) {
+                floodSet.setDrawValues(true);
+                floodSet.setValueTextSize(9f);
+                floodSet.setValueTextColor(floodColor);
+                floodSet.setValueFormatter(new ValueFormatter() {
+                    @Override
+                    public String getPointLabel(Entry entry) {
+                        return formatValue(entry.getY()) + " " + unit;
+                    }
+                });
+            }
             scatterData.addDataSet(floodSet);
             hasScatter = true;
         }
@@ -349,6 +364,17 @@ public class CurrentDetailFragment extends Fragment {
         if (!ebbEntries.isEmpty()) {
             int ebbColor = resolveColor(com.google.android.material.R.attr.colorTertiary);
             ScatterDataSet ebbSet = createScatterDataSet(ebbEntries, "", ebbColor);
+            if (showLabels) {
+                ebbSet.setDrawValues(true);
+                ebbSet.setValueTextSize(9f);
+                ebbSet.setValueTextColor(ebbColor);
+                ebbSet.setValueFormatter(new ValueFormatter() {
+                    @Override
+                    public String getPointLabel(Entry entry) {
+                        return formatValue(entry.getY()) + " " + unit;
+                    }
+                });
+            }
             scatterData.addDataSet(ebbSet);
             hasScatter = true;
         }
@@ -377,7 +403,6 @@ public class CurrentDetailFragment extends Fragment {
         addCurrentTimeLine(chart);
         configureYAxis(chart);
 
-        String unit = useMetric ? "cm/s" : "kn";
         attachMarker(chart, createValueMarker(unit));
 
         chart.invalidate();

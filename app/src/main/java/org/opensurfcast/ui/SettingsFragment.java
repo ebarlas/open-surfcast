@@ -44,6 +44,8 @@ public class SettingsFragment extends Fragment {
 
     private MaterialButtonToggleGroup themeToggleGroup;
     private MaterialButtonToggleGroup sortToggleGroup;
+    private MaterialSwitch chartLabelsSwitch;
+    private TextView chartLabelsSummary;
     private MaterialSwitch metricSwitch;
     private TextView metricSummary;
     private AutoCompleteTextView homeStationInput;
@@ -114,6 +116,22 @@ public class SettingsFragment extends Fragment {
         // Load tide stations for autocomplete
         loadTideStations();
 
+        // --- Chart labels toggle ---
+        chartLabelsSwitch = view.findViewById(R.id.switch_show_chart_labels);
+        chartLabelsSummary = view.findViewById(R.id.chart_labels_summary);
+        LinearLayout chartLabelsRow = view.findViewById(R.id.setting_show_chart_labels);
+
+        boolean showLabels = userPreferences.isShowChartLabels();
+        chartLabelsSwitch.setChecked(showLabels);
+        updateChartLabelsSummary(showLabels);
+
+        chartLabelsSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            userPreferences.setShowChartLabels(isChecked);
+            updateChartLabelsSummary(isChecked);
+        });
+
+        chartLabelsRow.setOnClickListener(v -> chartLabelsSwitch.toggle());
+
         // --- Metric units toggle ---
         metricSwitch = view.findViewById(R.id.switch_use_metric);
         metricSummary = view.findViewById(R.id.metric_summary);
@@ -168,6 +186,12 @@ public class SettingsFragment extends Fragment {
         } else {
             homeStationSummary.setText(R.string.settings_home_station_none);
         }
+    }
+
+    private void updateChartLabelsSummary(boolean showLabels) {
+        chartLabelsSummary.setText(showLabels
+                ? R.string.settings_show_chart_labels_summary_on
+                : R.string.settings_show_chart_labels_summary_off);
     }
 
     private void updateMetricSummary(boolean isMetric) {

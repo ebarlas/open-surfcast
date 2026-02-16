@@ -39,6 +39,9 @@ public class UserPreferences {
     // Station sort order preference key
     private static final String KEY_STATION_SORT_ORDER = "station_sort_order";
 
+    // Chart labels preference key
+    private static final String KEY_SHOW_CHART_LABELS = "show_chart_labels";
+
     // Sentinel value for unset coordinates
     private static final float COORDINATE_NOT_SET = Float.NaN;
 
@@ -396,6 +399,28 @@ public class UserPreferences {
     public void setStationSortOrder(StationSortOrder order) {
         prefs.edit()
                 .putInt(KEY_STATION_SORT_ORDER, order.ordinal())
+                .apply();
+    }
+
+    // ========== Chart Labels Preferences ==========
+
+    /**
+     * Returns whether value labels should be shown on tide and current chart markers.
+     *
+     * @return true to show labels (default), false to hide
+     */
+    public boolean isShowChartLabels() {
+        return prefs.getBoolean(KEY_SHOW_CHART_LABELS, true);
+    }
+
+    /**
+     * Sets whether value labels are shown on tide and current chart markers.
+     *
+     * @param show true to show labels, false to hide
+     */
+    public void setShowChartLabels(boolean show) {
+        prefs.edit()
+                .putBoolean(KEY_SHOW_CHART_LABELS, show)
                 .apply();
     }
 
