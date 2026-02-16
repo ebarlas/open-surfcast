@@ -117,8 +117,8 @@ public class CurrentPredictionParserTest {
         assertEquals(1767581220L, prediction.epochSeconds); // 2026-01-05 02:47:00 UTC
         assertEquals("flood", prediction.type);
         assertEquals(160.7, prediction.velocityMajor, 0.01);
-        assertEquals(210.0, prediction.meanFloodDirection, 0.01);
-        assertEquals(40.0, prediction.meanEbbDirection, 0.01);
+        assertEquals(Double.valueOf(210.0), prediction.meanFloodDirection);
+        assertEquals(Double.valueOf(40.0), prediction.meanEbbDirection);
         assertEquals("1", prediction.bin);
         assertNull(prediction.depth);
     }
@@ -194,8 +194,8 @@ public class CurrentPredictionParserTest {
         List<CurrentPrediction> predictions = parse(MULTIPLE_PREDICTIONS);
 
         CurrentPrediction prediction = predictions.get(0);
-        assertEquals(210.0, prediction.meanFloodDirection, 0.01);
-        assertEquals(40.0, prediction.meanEbbDirection, 0.01);
+        assertEquals(Double.valueOf(210.0), prediction.meanFloodDirection);
+        assertEquals(Double.valueOf(40.0), prediction.meanEbbDirection);
     }
 
     @Test
@@ -204,15 +204,15 @@ public class CurrentPredictionParserTest {
 
         // Flood should return flood direction
         CurrentPrediction flood = predictions.get(0);
-        assertEquals(210.0, flood.getCurrentDirection(), 0.01);
+        assertEquals(Double.valueOf(210.0), flood.getCurrentDirection());
 
         // Ebb should return ebb direction
         CurrentPrediction ebb = predictions.get(2);
-        assertEquals(40.0, ebb.getCurrentDirection(), 0.01);
+        assertEquals(Double.valueOf(40.0), ebb.getCurrentDirection());
 
         // Slack should return flood direction (arbitrary but consistent)
         CurrentPrediction slack = predictions.get(1);
-        assertEquals(210.0, slack.getCurrentDirection(), 0.01);
+        assertEquals(Double.valueOf(210.0), slack.getCurrentDirection());
     }
 
     @Test
@@ -268,12 +268,45 @@ public class CurrentPredictionParserTest {
     }
 
     @Test
+    public void testParseNullMeanFloodDirAndMeanEbbDir() throws IOException {
+        // Some stations (e.g. SFB1212) return null for meanFloodDir and meanEbbDir
+        String json = """
+                {
+                  "current_predictions": {
+                    "units": "meters, cm/s",
+                    "cp": [
+                      {
+                        "Type": "flood",
+                        "Time": "2026-01-05 02:47",
+                        "Velocity_Major": 160.7,
+                        "meanFloodDir": null,
+                        "meanEbbDir": null,
+                        "Bin": "1",
+                        "Depth": null
+                      }
+                    ]
+                  }
+                }
+                """;
+        List<CurrentPrediction> predictions = parse(json);
+
+        assertEquals(1, predictions.size());
+        CurrentPrediction prediction = predictions.get(0);
+        assertNull("meanFloodDirection should be null when API returns null",
+                prediction.meanFloodDirection);
+        assertNull("meanEbbDirection should be null when API returns null",
+                prediction.meanEbbDirection);
+        assertNull("getCurrentDirection should be null when directions are null",
+                prediction.getCurrentDirection());
+    }
+
+    @Test
     public void testParseDifferentDirections() throws IOException {
         List<CurrentPrediction> predictions = parse(PREDICTION_WITH_DEPTH);
 
         CurrentPrediction prediction = predictions.get(0);
-        assertEquals(45.0, prediction.meanFloodDirection, 0.01);
-        assertEquals(225.0, prediction.meanEbbDirection, 0.01);
+        assertEquals(Double.valueOf(45.0), prediction.meanFloodDirection);
+        assertEquals(Double.valueOf(225.0), prediction.meanEbbDirection);
     }
 
     @Test

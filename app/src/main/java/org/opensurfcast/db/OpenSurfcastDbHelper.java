@@ -13,7 +13,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 public class OpenSurfcastDbHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "opensurfcast.db";
-    private static final int DATABASE_VERSION = 2;
+    private static final int DATABASE_VERSION = 3;
 
     // Station tables
     public static final String TABLE_BUOY_STATION = "buoy_station";
@@ -157,8 +157,8 @@ public class OpenSurfcastDbHelper extends SQLiteOpenHelper {
                 timestamp TEXT,
                 type TEXT,
                 velocity_major REAL NOT NULL,
-                mean_flood_direction REAL NOT NULL,
-                mean_ebb_direction REAL NOT NULL,
+                mean_flood_direction REAL,
+                mean_ebb_direction REAL,
                 bin TEXT,
                 depth REAL,
                 PRIMARY KEY (id, epoch_seconds),

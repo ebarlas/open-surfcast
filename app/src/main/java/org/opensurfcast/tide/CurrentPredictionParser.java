@@ -125,8 +125,8 @@ public class CurrentPredictionParser {
         prediction.epochSeconds = parseEpochSeconds(prediction.timestamp);
         prediction.type = json.getString(FIELD_TYPE);
         prediction.velocityMajor = json.getDouble(FIELD_VELOCITY_MAJOR);
-        prediction.meanFloodDirection = json.getDouble(FIELD_MEAN_FLOOD_DIR);
-        prediction.meanEbbDirection = json.getDouble(FIELD_MEAN_EBB_DIR);
+        prediction.meanFloodDirection = optDouble(json, FIELD_MEAN_FLOOD_DIR);
+        prediction.meanEbbDirection = optDouble(json, FIELD_MEAN_EBB_DIR);
         prediction.bin = json.optString(FIELD_BIN, null);
         prediction.depth = optDouble(json, FIELD_DEPTH);
 

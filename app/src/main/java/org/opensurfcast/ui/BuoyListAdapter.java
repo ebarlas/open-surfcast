@@ -60,10 +60,14 @@ public class BuoyListAdapter extends RecyclerView.Adapter<BuoyListAdapter.ViewHo
 
     /**
      * Replaces the adapter data with the given list and refreshes the view.
+     *
+     * @param newStations the new list of stations, or null to clear
      */
     public void submitList(List<BuoyStation> newStations) {
         stations.clear();
-        stations.addAll(newStations);
+        if (newStations != null) {
+            stations.addAll(newStations);
+        }
         notifyDataSetChanged();
     }
 

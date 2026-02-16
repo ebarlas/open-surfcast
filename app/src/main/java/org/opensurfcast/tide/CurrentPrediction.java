@@ -104,8 +104,9 @@ public class CurrentPrediction {
      * Unit: degrees (0-360, where 0/360 = North, 90 = East, 180 = South, 270 = West)
      * <p>
      * This is the direction the current is flowing TOWARD during flood tide.
+     * May be null for some stations (e.g. subordinate stations) that do not provide this data.
      */
-    public double meanFloodDirection;
+    public Double meanFloodDirection;
 
     /**
      * Mean ebb direction (meanEbbDir field) - The average direction of the ebb current.
@@ -114,8 +115,9 @@ public class CurrentPrediction {
      * <p>
      * This is the direction the current is flowing TOWARD during ebb tide.
      * Typically approximately 180 degrees opposite of the flood direction.
+     * May be null for some stations (e.g. subordinate stations) that do not provide this data.
      */
-    public double meanEbbDirection;
+    public Double meanEbbDirection;
 
     /**
      * Bin number (Bin field) - The depth bin for this prediction.
@@ -164,9 +166,9 @@ public class CurrentPrediction {
      *   <li>For slack: returns {@link #meanFloodDirection} (direction is less meaningful at slack)</li>
      * </ul>
      *
-     * @return the current direction in degrees
+     * @return the current direction in degrees, or null if not available
      */
-    public double getCurrentDirection() {
+    public Double getCurrentDirection() {
         if (isEbb()) {
             return meanEbbDirection;
         }

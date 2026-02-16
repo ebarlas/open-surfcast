@@ -38,7 +38,7 @@ public class BuoyStdMetDataDb {
             db.delete(OpenSurfcastDbHelper.TABLE_BUOY_STD_MET_DATA,
                     "id = ?", new String[]{stationId});
             for (BuoyStdMetData data : dataList) {
-                db.insert(OpenSurfcastDbHelper.TABLE_BUOY_STD_MET_DATA, null,
+                db.insertOrThrow(OpenSurfcastDbHelper.TABLE_BUOY_STD_MET_DATA, null,
                         toContentValues(stationId, data));
             }
             db.setTransactionSuccessful();

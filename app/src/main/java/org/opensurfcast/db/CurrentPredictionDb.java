@@ -34,7 +34,7 @@ public class CurrentPredictionDb {
             db.delete(OpenSurfcastDbHelper.TABLE_CURRENT_PREDICTION,
                     "id = ?", new String[]{stationId});
             for (CurrentPrediction data : dataList) {
-                db.insert(OpenSurfcastDbHelper.TABLE_CURRENT_PREDICTION, null,
+                db.insertOrThrow(OpenSurfcastDbHelper.TABLE_CURRENT_PREDICTION, null,
                         toContentValues(stationId, data));
             }
             db.setTransactionSuccessful();
@@ -92,8 +92,16 @@ public class CurrentPredictionDb {
         values.put("timestamp", data.timestamp);
         values.put("type", data.type);
         values.put("velocity_major", data.velocityMajor);
-        values.put("mean_flood_direction", data.meanFloodDirection);
-        values.put("mean_ebb_direction", data.meanEbbDirection);
+        if (data.meanFloodDirection != null) {
+            values.put("mean_flood_direction", data.meanFloodDirection);
+        } else {
+            values.putNull("mean_flood_direction");
+        }
+        if (data.meanEbbDirection != null) {
+            values.put("mean_ebb_direction", data.meanEbbDirection);
+        } else {
+            values.putNull("mean_ebb_direction");
+        }
         values.put("bin", data.bin);
         values.put("depth", data.depth);
         return values;
@@ -105,8 +113,10 @@ public class CurrentPredictionDb {
         data.timestamp = cursor.getString(cursor.getColumnIndexOrThrow("timestamp"));
         data.type = cursor.getString(cursor.getColumnIndexOrThrow("type"));
         data.velocityMajor = cursor.getDouble(cursor.getColumnIndexOrThrow("velocity_major"));
-        data.meanFloodDirection = cursor.getDouble(cursor.getColumnIndexOrThrow("mean_flood_direction"));
-        data.meanEbbDirection = cursor.getDouble(cursor.getColumnIndexOrThrow("mean_ebb_direction"));
+        int floodDirIndex = cursor.getColumnIndexOrThrow("mean_flood_direction");
+        data.meanFloodDirection = cursor.isNull(floodDirIndex) ? null : cursor.getDouble(floodDirIndex);
+        int ebbDirIndex = cursor.getColumnIndexOrThrow("mean_ebb_direction");
+        data.meanEbbDirection = cursor.isNull(ebbDirIndex) ? null : cursor.getDouble(ebbDirIndex);
         data.bin = cursor.getString(cursor.getColumnIndexOrThrow("bin"));
         int depthIndex = cursor.getColumnIndexOrThrow("depth");
         data.depth = cursor.isNull(depthIndex) ? null : cursor.getDouble(depthIndex);

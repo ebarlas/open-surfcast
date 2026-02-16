@@ -34,7 +34,7 @@ public class BuoySpecWaveDataDb {
             db.delete(OpenSurfcastDbHelper.TABLE_BUOY_SPEC_WAVE_DATA,
                     "id = ?", new String[]{stationId});
             for (BuoySpecWaveData data : dataList) {
-                db.insert(OpenSurfcastDbHelper.TABLE_BUOY_SPEC_WAVE_DATA, null,
+                db.insertOrThrow(OpenSurfcastDbHelper.TABLE_BUOY_SPEC_WAVE_DATA, null,
                         toContentValues(stationId, data));
             }
             db.setTransactionSuccessful();

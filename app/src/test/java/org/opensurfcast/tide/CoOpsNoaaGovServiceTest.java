@@ -269,12 +269,16 @@ public class CoOpsNoaaGovServiceTest {
         List<CurrentPrediction> predictions = CoOpsNoaaGovService.fetchCurrentPredictions(
                 "ACT0091", "20260101", "20260107");
 
-        // All predictions should have valid direction data (0-360 degrees)
+        // All predictions should have valid direction data (0-360 degrees) or null if unavailable
         for (CurrentPrediction prediction : predictions) {
-            assertTrue("Flood direction should be valid: " + prediction.meanFloodDirection,
-                    prediction.meanFloodDirection >= 0 && prediction.meanFloodDirection <= 360);
-            assertTrue("Ebb direction should be valid: " + prediction.meanEbbDirection,
-                    prediction.meanEbbDirection >= 0 && prediction.meanEbbDirection <= 360);
+            if (prediction.meanFloodDirection != null) {
+                assertTrue("Flood direction should be valid: " + prediction.meanFloodDirection,
+                        prediction.meanFloodDirection >= 0 && prediction.meanFloodDirection <= 360);
+            }
+            if (prediction.meanEbbDirection != null) {
+                assertTrue("Ebb direction should be valid: " + prediction.meanEbbDirection,
+                        prediction.meanEbbDirection >= 0 && prediction.meanEbbDirection <= 360);
+            }
         }
     }
 

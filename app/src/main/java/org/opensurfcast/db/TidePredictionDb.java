@@ -34,7 +34,7 @@ public class TidePredictionDb {
             db.delete(OpenSurfcastDbHelper.TABLE_TIDE_PREDICTION,
                     "id = ?", new String[]{stationId});
             for (TidePrediction data : dataList) {
-                db.insert(OpenSurfcastDbHelper.TABLE_TIDE_PREDICTION, null,
+                db.insertOrThrow(OpenSurfcastDbHelper.TABLE_TIDE_PREDICTION, null,
                         toContentValues(stationId, data));
             }
             db.setTransactionSuccessful();
