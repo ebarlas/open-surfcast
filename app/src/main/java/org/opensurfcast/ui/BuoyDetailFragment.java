@@ -50,6 +50,7 @@ import org.opensurfcast.prefs.UserPreferences;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.TimeZone;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -965,21 +966,25 @@ public class BuoyDetailFragment extends Fragment {
         xAxis.setTextSize(10f);
         xAxis.setGridColor(gridColor);
         xAxis.setDrawAxisLine(false);
-        xAxis.setLabelCount(4, false);
 
         // Adapt format to the visible data range:
         // >2 days  → "Jan 9"  (date only, readable at multi-week scale)
-        // ≤2 days  → "Jan 9 15:00" (date + time for short ranges)
+        // ≤2 days  → "M/d h:mm a" (date + time, AM/PM, consistent with list views)
         float xMin = chart.getData() != null ? chart.getData().getXMin() : 0;
         float xMax = chart.getData() != null ? chart.getData().getXMax() : 0;
         float rangeSeconds = xMax - xMin;
         boolean shortRange = rangeSeconds <= 2 * 24 * 3600;
 
-        String pattern = shortRange ? "MMM d HH:mm" : "MMM d";
+        xAxis.setLabelCount(shortRange ? 3 : 4, false);
+        String pattern = shortRange ? "M/d h:mm a" : "MMM d";
         xAxis.setGranularity(shortRange ? 3600f : 86400f);
 
         xAxis.setValueFormatter(new ValueFormatter() {
-            private final SimpleDateFormat fmt = new SimpleDateFormat(pattern, Locale.US);
+            private final SimpleDateFormat fmt = new SimpleDateFormat(pattern, Locale.getDefault());
+
+            {
+                fmt.setTimeZone(TimeZone.getDefault());
+            }
 
             @Override
             public String getFormattedValue(float value) {
