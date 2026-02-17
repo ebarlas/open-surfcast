@@ -8,7 +8,7 @@ import java.time.Duration;
  * Provides common implementation for task metadata.
  * The task key defaults to the class name plus an optional suffix from
  * {@link #getKeySuffix()} (e.g. station ID). Subclasses implement
- * {@link #execute()} to perform the actual work.
+ * {@link #call()} to perform the actual work.
  */
 public abstract class BaseTask implements Task {
     private final Duration cooldownPeriod;
@@ -44,23 +44,15 @@ public abstract class BaseTask implements Task {
         return cooldownPeriod;
     }
 
-    @Override
-    public final void run() {
-        try {
-            execute();
-        } catch (Exception e) {
-            // Exception will be caught by TaskScheduler's wrapper
-            throw new RuntimeException(e);
-        }
-    }
-
     /**
      * Subclasses implement the actual work here.
      * <p>
-     * Called on a background thread.
-     * Should fetch data from APIs and save to database.
+     * Called on a background thread. Return null for no result, or a value
+     * to pass to {@link TaskListener#onTaskCompleted(Task, Object)}.
      *
+     * @return the result, or null
      * @throws Exception if an error occurs during execution
      */
-    protected abstract void execute() throws Exception;
+    @Override
+    public abstract Object call() throws Exception;
 }

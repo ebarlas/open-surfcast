@@ -44,7 +44,7 @@ public class FetchCurrentPredictionsTask extends BaseTask {
     }
 
     @Override
-    protected void execute() throws IOException {
+    public Object call() throws IOException {
         // Generate date range: 7 days ago to 30 days from now
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd", Locale.US);
         Calendar calendar = Calendar.getInstance();
@@ -61,5 +61,6 @@ public class FetchCurrentPredictionsTask extends BaseTask {
         Timer t = new Timer();
         dataDb.replaceAllForStation(stationId, predictions);
         logger.info("Replaced current predictions for station " + stationId + " (" + t.elapsed() + " ms)");
+        return null;
     }
 }

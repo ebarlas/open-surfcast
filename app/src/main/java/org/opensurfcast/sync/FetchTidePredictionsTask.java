@@ -43,7 +43,7 @@ public class FetchTidePredictionsTask extends BaseTask {
     }
 
     @Override
-    protected void execute() throws IOException {
+    public Object call() throws IOException {
         // Generate date range: 7 days back to 30 days forward
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd", Locale.US);
         Calendar beginCal = Calendar.getInstance();
@@ -61,5 +61,6 @@ public class FetchTidePredictionsTask extends BaseTask {
         Timer t = new Timer();
         dataDb.replaceAllForStation(stationId, predictions);
         logger.info("Replaced tide predictions for station " + stationId + " (" + t.elapsed() + " ms)");
+        return null;
     }
 }

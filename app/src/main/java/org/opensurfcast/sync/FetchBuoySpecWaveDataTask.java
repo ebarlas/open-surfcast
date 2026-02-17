@@ -42,14 +42,14 @@ public class FetchBuoySpecWaveDataTask extends BaseTask {
     }
 
     @Override
-    protected void execute() throws IOException {
+    public Object call() throws IOException {
         Timer timer = new Timer();
         String lastModified = httpCache.get(getKey());
         Modified<List<BuoySpecWaveData>> result = NdbcNoaaGovService.fetchBuoySpecWaveData(stationId, lastModified);
         long elapsed = timer.elapsed();
         if (result == null) {
             logger.info("Spec wave data not modified for station " + stationId + " (" + elapsed + "ms)");
-            return;
+            return null;
         }
         if (result.value() != null) {
             List<BuoySpecWaveData> data = result.value();
@@ -59,5 +59,6 @@ public class FetchBuoySpecWaveDataTask extends BaseTask {
             logger.info("Replaced spec wave observations for station " + stationId + " (" + t.elapsed() + " ms)");
             httpCache.put(getKey(), result.lastModified());
         }
+        return null;
     }
 }

@@ -82,8 +82,9 @@ public class TaskScheduler {
         // Wrap task with completion handling
         executor.submit(() -> {
             Exception error = null;
+            Object result = null;
             try {
-                task.run();
+                result = task.call();
             } catch (Exception e) {
                 logger.error("[" + key + "] Task failed", e);
                 error = e;
@@ -91,6 +92,7 @@ public class TaskScheduler {
 
             // Post completion to main thread
             final Exception finalError = error;
+            final Object finalResult = result;
             mainThreadExecutor.accept(() -> {
                 runningTasks.remove(key);
 
@@ -98,7 +100,7 @@ public class TaskScheduler {
                     notifyTaskFailed(task, finalError);
                 } else {
                     cooldowns.recordCompletion(task);
-                    notifyTaskCompleted(task);
+                    notifyTaskCompleted(task, finalResult);
                 }
             });
         });
@@ -164,10 +166,10 @@ public class TaskScheduler {
         }
     }
 
-    private void notifyTaskCompleted(Task task) {
+    private void notifyTaskCompleted(Task task, Object result) {
         logger.debug("[" + task.getKey() + "] Task completed");
         for (TaskListener listener : listeners) {
-            listener.onTaskCompleted(task);
+            listener.onTaskCompleted(task, result);
         }
     }
 

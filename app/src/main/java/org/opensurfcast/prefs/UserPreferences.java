@@ -113,6 +113,21 @@ public class UserPreferences {
         return getPreferredBuoyStations().contains(id);
     }
 
+    /**
+     * Retains only preferred buoy station IDs that are in the given valid set.
+     * Removes any preferred stations that are no longer listed (e.g. defunct).
+     * Writes only if the resulting set changed.
+     *
+     * @param validIds set of station IDs currently in the catalog
+     */
+    public void retainOnlyPreferredBuoyStations(Set<String> validIds) {
+        Set<String> preferred = new HashSet<>(getPreferredBuoyStations());
+        preferred.retainAll(validIds);
+        if (!preferred.equals(getPreferredBuoyStations())) {
+            setPreferredBuoyStations(preferred);
+        }
+    }
+
     // ========== Tide Station Preferences ==========
 
     /**
@@ -171,6 +186,26 @@ public class UserPreferences {
         return getPreferredTideStations().contains(id);
     }
 
+    /**
+     * Retains only preferred tide station IDs that are in the given valid set.
+     * Removes any preferred stations that are no longer listed (e.g. defunct).
+     * If the home station ID is set and no longer in the valid set, clears it.
+     * Writes only if the resulting set or home station changed.
+     *
+     * @param validIds set of station IDs currently in the catalog
+     */
+    public void retainOnlyPreferredTideStations(Set<String> validIds) {
+        Set<String> preferred = new HashSet<>(getPreferredTideStations());
+        preferred.retainAll(validIds);
+        if (!preferred.equals(getPreferredTideStations())) {
+            setPreferredTideStations(preferred);
+        }
+        String homeId = getHomeStationId();
+        if (homeId != null && !validIds.contains(homeId)) {
+            removeHomeLocation();
+        }
+    }
+
     // ========== Current Station Preferences ==========
 
     /**
@@ -227,6 +262,21 @@ public class UserPreferences {
      */
     public boolean isPreferredCurrentStation(String id) {
         return getPreferredCurrentStations().contains(id);
+    }
+
+    /**
+     * Retains only preferred current station IDs that are in the given valid set.
+     * Removes any preferred stations that are no longer listed (e.g. defunct).
+     * Writes only if the resulting set changed.
+     *
+     * @param validIds set of station IDs currently in the catalog
+     */
+    public void retainOnlyPreferredCurrentStations(Set<String> validIds) {
+        Set<String> preferred = new HashSet<>(getPreferredCurrentStations());
+        preferred.retainAll(validIds);
+        if (!preferred.equals(getPreferredCurrentStations())) {
+            setPreferredCurrentStations(preferred);
+        }
     }
 
     // ========== Home Location Preferences ==========
@@ -311,6 +361,21 @@ public class UserPreferences {
                 .putString(KEY_HOME_STATION_NAME, stationName)
                 .putFloat(KEY_HOME_LATITUDE, (float) latitude)
                 .putFloat(KEY_HOME_LONGITUDE, (float) longitude)
+                .apply();
+    }
+
+    /**
+     * Completely unsets the home location.
+     * Removes station ID, name, latitude, and longitude. After this,
+     * {@link #getHomeStationId()} and {@link #getHomeStationName()} return null,
+     * and {@link #getHomeLatitude()} / {@link #getHomeLongitude()} return defaults.
+     */
+    public void removeHomeLocation() {
+        prefs.edit()
+                .remove(KEY_HOME_STATION_ID)
+                .remove(KEY_HOME_STATION_NAME)
+                .remove(KEY_HOME_LATITUDE)
+                .remove(KEY_HOME_LONGITUDE)
                 .apply();
     }
 

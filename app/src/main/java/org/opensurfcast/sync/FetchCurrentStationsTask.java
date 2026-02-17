@@ -10,11 +10,14 @@ import org.opensurfcast.timer.Timer;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Task to fetch the current station catalog from NOAA CO-OPS.
  * <p>
  * Fetches all current prediction stations and updates the local database.
+ * Returns the set of station IDs written to the DB.
  */
 public class FetchCurrentStationsTask extends BaseTask {
     private static final Duration COOLDOWN_PERIOD = Duration.ofDays(1);
@@ -29,7 +32,7 @@ public class FetchCurrentStationsTask extends BaseTask {
     }
 
     @Override
-    protected void execute() throws IOException {
+    public Object call() throws IOException {
         Timer timer = new Timer();
         List<CurrentStation> stations = CoOpsNoaaGovService.fetchCurrentStations();
         long elapsed = timer.elapsed();
@@ -37,5 +40,6 @@ public class FetchCurrentStationsTask extends BaseTask {
         Timer t = new Timer();
         stationDb.replaceAll(stations);
         logger.info("Replaced " + stations.size() + " current stations (" + t.elapsed() + " ms)");
+        return stations.stream().map(s -> s.id).collect(Collectors.toSet());
     }
 }

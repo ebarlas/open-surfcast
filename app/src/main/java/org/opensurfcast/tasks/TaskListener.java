@@ -28,6 +28,19 @@ public interface TaskListener {
     }
 
     /**
+     * Called when a value-returning task completes successfully.
+     * <p>
+     * Invoked on the main thread. Default implementation delegates to
+     * {@link #onTaskCompleted(Task)}. Override to use the result.
+     *
+     * @param task   the task that completed
+     * @param result the value returned by the task (null if no value)
+     */
+    default void onTaskCompleted(Task task, Object result) {
+        onTaskCompleted(task);
+    }
+
+    /**
      * Called when a task fails with an error.
      * <p>
      * Invoked on the main thread.

@@ -29,8 +29,13 @@ import org.opensurfcast.log.AppLogger;
 import org.opensurfcast.log.AsyncLogDb;
 import org.opensurfcast.log.Logger;
 import org.opensurfcast.prefs.UserPreferences;
+import org.opensurfcast.sync.FetchBuoyStationsTask;
+import org.opensurfcast.sync.FetchCurrentStationsTask;
+import org.opensurfcast.sync.FetchTideStationsTask;
 import org.opensurfcast.sync.SyncManager;
+import org.opensurfcast.tasks.Task;
 import org.opensurfcast.tasks.TaskCooldowns;
+import org.opensurfcast.tasks.TaskListener;
 import org.opensurfcast.tasks.TaskScheduler;
 import org.opensurfcast.ui.BuoyListFragment;
 import org.opensurfcast.ui.CurrentListFragment;
@@ -38,6 +43,7 @@ import org.opensurfcast.ui.LogListFragment;
 import org.opensurfcast.ui.SettingsFragment;
 import org.opensurfcast.ui.TideListFragment;
 
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -68,6 +74,24 @@ public class MainActivity extends AppCompatActivity {
     private BottomNavigationView bottomNavigation;
     private String currentTag = TAG_BUOYS;
 
+    private final TaskListener catalogPruneListener = new TaskListener() {
+        @Override
+        public void onTaskCompleted(Task task, Object result) {
+            if (!(result instanceof Set)) {
+                return;
+            }
+            @SuppressWarnings("unchecked")
+            Set<String> validIds = (Set<String>) result;
+            if (task instanceof FetchBuoyStationsTask) {
+                userPreferences.retainOnlyPreferredBuoyStations(validIds);
+            } else if (task instanceof FetchTideStationsTask) {
+                userPreferences.retainOnlyPreferredTideStations(validIds);
+            } else if (task instanceof FetchCurrentStationsTask) {
+                userPreferences.retainOnlyPreferredCurrentStations(validIds);
+            }
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         // Apply persisted theme before the activity inflates its layout
@@ -93,6 +117,8 @@ public class MainActivity extends AppCompatActivity {
         });
 
         initDependencies();
+
+        taskScheduler.addListener(catalogPruneListener);
 
         // Set up bottom navigation
         bottomNavigation.setOnItemSelectedListener(item -> {

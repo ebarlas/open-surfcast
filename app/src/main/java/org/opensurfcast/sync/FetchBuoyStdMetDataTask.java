@@ -46,14 +46,14 @@ public class FetchBuoyStdMetDataTask extends BaseTask {
     }
 
     @Override
-    protected void execute() throws IOException {
+    public Object call() throws IOException {
         Timer timer = new Timer();
         String lastModified = httpCache.get(getKey());
         Modified<List<BuoyStdMetData>> result = NdbcNoaaGovService.fetchBuoyStdMetData(stationId, lastModified);
         long elapsed = timer.elapsed();
         if (result == null) {
             logger.info("Std met data not modified for station " + stationId + " (" + elapsed + "ms)");
-            return;
+            return null;
         }
         if (result.value() != null) {
             List<BuoyStdMetData> data = result.value();
@@ -63,5 +63,6 @@ public class FetchBuoyStdMetDataTask extends BaseTask {
             logger.info("Replaced std met observations for station " + stationId + " (" + t.elapsed() + " ms)");
             httpCache.put(getKey(), result.lastModified());
         }
+        return null;
     }
 }

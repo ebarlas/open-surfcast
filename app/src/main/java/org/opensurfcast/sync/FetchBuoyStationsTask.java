@@ -11,6 +11,7 @@ import org.opensurfcast.timer.Timer;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -20,7 +21,8 @@ import java.util.stream.Collectors;
  * <p>
  * Fetches all active buoy stations and updates the local database.
  * Uses {@link HttpCache} to send {@code If-Modified-Since} headers
- * and skip redundant downloads.
+ * and skip redundant downloads. Returns the set of station IDs written
+ * to the DB, or null when not modified (304).
  */
 public class FetchBuoyStationsTask extends BaseTask {
     private static final Duration COOLDOWN_PERIOD = Duration.ofDays(1);
@@ -37,14 +39,14 @@ public class FetchBuoyStationsTask extends BaseTask {
     }
 
     @Override
-    protected void execute() throws IOException {
+    public Object call() throws IOException {
         Timer timer = new Timer();
         String lastModified = httpCache.get(getKey());
         Modified<List<BuoyStation>> result = NdbcNoaaGovService.fetchBuoyStations(lastModified);
         long elapsed = timer.elapsed();
         if (result == null) {
             logger.info("Buoy stations not modified (" + elapsed + "ms)");
-            return;
+            return null;
         }
         Set<String> ids = NdbcNoaaGovService.fetchStationIdsWithStdMetAndSpecWave();
         elapsed = timer.elapsed();
@@ -58,6 +60,8 @@ public class FetchBuoyStationsTask extends BaseTask {
             stationDb.replaceAll(retained);
             logger.info("Replaced " + retained.size() + " buoy stations (" + t.elapsed() + " ms)");
             httpCache.put(getKey(), result.lastModified());
+            return retained.stream().map(BuoyStation::getId).collect(Collectors.toCollection(HashSet::new));
         }
+        return null;
     }
 }

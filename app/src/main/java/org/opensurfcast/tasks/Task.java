@@ -1,14 +1,17 @@
 package org.opensurfcast.tasks;
 
 import java.time.Duration;
+import java.util.concurrent.Callable;
 
 /**
  * Interface for background tasks.
  * <p>
- * All tasks are Runnables that can be submitted to an executor.
  * Each task has a unique key for deduplication and a cooldown period.
+ * Execution via {@link #call()} returns a result (or null) that the
+ * scheduler passes to {@link TaskListener#onTaskCompleted(Task, Object)}.
  */
-public interface Task extends Runnable {
+public interface Task extends Callable<Object> {
+
     /**
      * Returns a unique key for this task instance.
      * <p>
