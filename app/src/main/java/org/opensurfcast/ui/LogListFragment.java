@@ -1,14 +1,19 @@
 package org.opensurfcast.ui;
 
+import android.content.res.Configuration;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
 import android.widget.LinearLayout;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -46,6 +51,9 @@ public class LogListFragment extends Fragment {
     /** Currently selected minimum log level filter, or null for "All". */
     private LogLevel currentFilter = null;
 
+    /** Whether the fragment is in landscape immersive mode. */
+    private boolean immersiveMode;
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
@@ -64,7 +72,6 @@ public class LogListFragment extends Fragment {
         emptyState = view.findViewById(R.id.empty_state);
         swipeRefresh = view.findViewById(R.id.swipe_refresh);
 
-        // Toolbar menu
         MaterialToolbar toolbar = view.findViewById(R.id.toolbar);
         toolbar.setOnMenuItemClickListener(this::onMenuItemClick);
 
@@ -79,7 +86,6 @@ public class LogListFragment extends Fragment {
                 R.color.md_theme_light_secondary);
         swipeRefresh.setOnRefreshListener(this::loadLogs);
 
-        // Filter chips
         ChipGroup chipGroup = view.findViewById(R.id.chip_group_filter);
         chipGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
             if (checkedIds.isEmpty()) {
@@ -101,8 +107,45 @@ public class LogListFragment extends Fragment {
             loadLogs();
         });
 
-        // Initial load
         loadLogs();
+
+        if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            enterImmersiveMode(view, toolbar);
+        }
+    }
+
+    @Override
+    public void onDestroyView() {
+        if (immersiveMode) {
+            exitImmersiveMode();
+        }
+        super.onDestroyView();
+    }
+
+    private void enterImmersiveMode(View view, MaterialToolbar toolbar) {
+        immersiveMode = true;
+
+        ((View) toolbar.getParent()).setVisibility(View.GONE);
+        view.findViewById(R.id.filter_chip_row).setVisibility(View.GONE);
+
+        ((MainActivity) requireActivity()).setBottomNavigationVisible(false);
+
+        Window window = requireActivity().getWindow();
+        WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(window, view);
+        controller.hide(WindowInsetsCompat.Type.systemBars());
+        controller.setSystemBarsBehavior(
+                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+    }
+
+    private void exitImmersiveMode() {
+        if (getActivity() == null) return;
+
+        ((MainActivity) requireActivity()).setBottomNavigationVisible(true);
+
+        Window window = requireActivity().getWindow();
+        WindowInsetsControllerCompat controller =
+                WindowCompat.getInsetsController(window, window.getDecorView());
+        controller.show(WindowInsetsCompat.Type.systemBars());
     }
 
     private boolean onMenuItemClick(MenuItem item) {
