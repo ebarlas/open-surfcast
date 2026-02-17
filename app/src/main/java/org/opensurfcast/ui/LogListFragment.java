@@ -41,6 +41,7 @@ import java.util.concurrent.CompletableFuture;
 public class LogListFragment extends Fragment {
 
     private static final int MAX_LOG_ENTRIES = 500;
+    private static final String KEY_FILTER_LEVEL = "filter_level";
 
     private RecyclerView recyclerView;
     private LinearLayout emptyState;
@@ -58,7 +59,20 @@ public class LogListFragment extends Fragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
+        if (savedInstanceState != null) {
+            String saved = savedInstanceState.getString(KEY_FILTER_LEVEL);
+            currentFilter = (saved != null && !saved.isEmpty())
+                    ? LogLevel.valueOf(saved) : null;
+        }
         return inflater.inflate(R.layout.fragment_log_list, container, false);
+    }
+
+    @Override
+    public void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        if (currentFilter != null) {
+            outState.putString(KEY_FILTER_LEVEL, currentFilter.name());
+        }
     }
 
     @Override
@@ -87,6 +101,7 @@ public class LogListFragment extends Fragment {
         swipeRefresh.setOnRefreshListener(this::loadLogs);
 
         ChipGroup chipGroup = view.findViewById(R.id.chip_group_filter);
+        chipGroup.check(filterToChipId(currentFilter));
         chipGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
             if (checkedIds.isEmpty()) {
                 currentFilter = null;
@@ -196,5 +211,16 @@ public class LogListFragment extends Fragment {
     private void updateEmptyState(boolean empty) {
         emptyState.setVisibility(empty ? View.VISIBLE : View.GONE);
         recyclerView.setVisibility(empty ? View.GONE : View.VISIBLE);
+    }
+
+    private static int filterToChipId(LogLevel filter) {
+        if (filter == null) return R.id.chip_all;
+        switch (filter) {
+            case DEBUG: return R.id.chip_debug;
+            case INFO:  return R.id.chip_info;
+            case WARN:  return R.id.chip_warn;
+            case ERROR: return R.id.chip_error;
+            default:    return R.id.chip_all;
+        }
     }
 }
