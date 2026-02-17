@@ -66,16 +66,16 @@ public class TaskScheduler {
         String key = task.getKey();
 
         if (runningTasks.containsKey(key)) {
-            logger.debug("Task ignored (already running): " + key);
+            logger.debug("[" + key + "] Task ignored (already running)");
             return;
         }
 
         if (cooldowns.isOnCooldown(task)) {
-            logger.debug("Task ignored (on cooldown): " + key);
+            logger.debug("[" + key + "] Task ignored (on cooldown)");
             return;
         }
 
-        logger.debug("Task submitted: " + key);
+        logger.debug("[" + key + "] Task submitted");
         runningTasks.put(key, task);
         notifyTaskStarted(task);
 
@@ -85,7 +85,7 @@ public class TaskScheduler {
             try {
                 task.run();
             } catch (Exception e) {
-                logger.error("Task failed: " + key, e);
+                logger.error("[" + key + "] Task failed", e);
                 error = e;
             }
 
@@ -158,20 +158,21 @@ public class TaskScheduler {
     }
 
     private void notifyTaskStarted(Task task) {
-        logger.debug("Task started: " + task.getKey());
+        logger.debug("[" + task.getKey() + "] Task started");
         for (TaskListener listener : listeners) {
             listener.onTaskStarted(task);
         }
     }
 
     private void notifyTaskCompleted(Task task) {
-        logger.debug("Task completed: " + task.getKey());
+        logger.debug("[" + task.getKey() + "] Task completed");
         for (TaskListener listener : listeners) {
             listener.onTaskCompleted(task);
         }
     }
 
     private void notifyTaskFailed(Task task, Exception error) {
+        logger.debug("[" + task.getKey() + "] Task failed (notifying listeners)");
         for (TaskListener listener : listeners) {
             listener.onTaskFailed(task, error);
         }
