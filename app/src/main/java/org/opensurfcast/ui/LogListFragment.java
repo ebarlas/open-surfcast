@@ -2,11 +2,14 @@ package org.opensurfcast.ui;
 
 import android.content.res.Configuration;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 
 import androidx.annotation.NonNull;
@@ -35,22 +38,27 @@ import java.util.concurrent.CompletableFuture;
 /**
  * Fragment displaying application log entries.
  * <p>
- * Provides level filtering via M3 filter chips, pull-to-refresh,
+ * Provides text search, level filtering via M3 filter chips, pull-to-refresh,
  * and a toolbar action to clear all logs.
  */
 public class LogListFragment extends Fragment {
 
     private static final int MAX_LOG_ENTRIES = 500;
     private static final String KEY_FILTER_LEVEL = "filter_level";
+    private static final String KEY_SEARCH_QUERY = "search_query";
 
     private RecyclerView recyclerView;
     private LinearLayout emptyState;
     private SwipeRefreshLayout swipeRefresh;
     private LogListAdapter adapter;
     private AsyncLogDb asyncLogDb;
+    private EditText searchInput;
 
     /** Currently selected minimum log level filter, or null for "All". */
     private LogLevel currentFilter = null;
+
+    /** Current search query, or null/empty when not searching. */
+    private String currentSearchQuery;
 
     /** Whether the fragment is in landscape immersive mode. */
     private boolean immersiveMode;
@@ -63,6 +71,7 @@ public class LogListFragment extends Fragment {
             String saved = savedInstanceState.getString(KEY_FILTER_LEVEL);
             currentFilter = (saved != null && !saved.isEmpty())
                     ? LogLevel.valueOf(saved) : null;
+            currentSearchQuery = savedInstanceState.getString(KEY_SEARCH_QUERY);
         }
         return inflater.inflate(R.layout.fragment_log_list, container, false);
     }
@@ -72,6 +81,9 @@ public class LogListFragment extends Fragment {
         super.onSaveInstanceState(outState);
         if (currentFilter != null) {
             outState.putString(KEY_FILTER_LEVEL, currentFilter.name());
+        }
+        if (currentSearchQuery != null && !currentSearchQuery.isEmpty()) {
+            outState.putString(KEY_SEARCH_QUERY, currentSearchQuery);
         }
     }
 
@@ -85,6 +97,27 @@ public class LogListFragment extends Fragment {
         recyclerView = view.findViewById(R.id.log_list);
         emptyState = view.findViewById(R.id.empty_state);
         swipeRefresh = view.findViewById(R.id.swipe_refresh);
+        searchInput = view.findViewById(R.id.search_input);
+
+        if (currentSearchQuery != null) {
+            searchInput.setText(currentSearchQuery);
+        }
+        searchInput.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                String q = s.toString().trim();
+                currentSearchQuery = q.isEmpty() ? null : q;
+                loadLogs();
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+            }
+        });
 
         MaterialToolbar toolbar = view.findViewById(R.id.toolbar);
         toolbar.setOnMenuItemClickListener(this::onMenuItemClick);
@@ -141,6 +174,7 @@ public class LogListFragment extends Fragment {
         immersiveMode = true;
 
         ((View) toolbar.getParent()).setVisibility(View.GONE);
+        view.findViewById(R.id.search_row).setVisibility(View.GONE);
         view.findViewById(R.id.filter_chip_row).setVisibility(View.GONE);
 
         ((MainActivity) requireActivity()).setBottomNavigationVisible(false);
@@ -178,7 +212,9 @@ public class LogListFragment extends Fragment {
     private void loadLogs() {
         CompletableFuture<List<LogEntry>> future;
 
-        if (currentFilter != null) {
+        if (currentSearchQuery != null && !currentSearchQuery.isEmpty()) {
+            future = asyncLogDb.search(currentSearchQuery, currentFilter, MAX_LOG_ENTRIES);
+        } else if (currentFilter != null) {
             future = asyncLogDb.getByMinLevel(currentFilter);
         } else {
             future = asyncLogDb.getRecent(MAX_LOG_ENTRIES);

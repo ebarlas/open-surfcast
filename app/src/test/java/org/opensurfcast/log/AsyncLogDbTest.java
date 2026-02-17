@@ -80,6 +80,28 @@ public class AsyncLogDbTest {
         assertTrue(stubLogDb.deleteAllCalled);
     }
 
+    @Test
+    public void search_queryAndLimit_passesToLogDb() throws ExecutionException, InterruptedException {
+        stubLogDb.entries.add(new LogEntry(1, 1000L, LogLevel.INFO, "Match", null));
+
+        asyncLogDb.search("foo", 50).get();
+
+        assertEquals("foo", stubLogDb.lastSearchQuery);
+        assertEquals(50, stubLogDb.lastSearchLimit);
+        assertEquals(null, stubLogDb.lastSearchMinLevel);
+    }
+
+    @Test
+    public void search_queryMinLevelAndLimit_passesToLogDb() throws ExecutionException, InterruptedException {
+        stubLogDb.entries.add(new LogEntry(1, 1000L, LogLevel.WARN, "Match", null));
+
+        asyncLogDb.search("bar", LogLevel.WARN, 100).get();
+
+        assertEquals("bar", stubLogDb.lastSearchQuery);
+        assertEquals(LogLevel.WARN, stubLogDb.lastSearchMinLevel);
+        assertEquals(100, stubLogDb.lastSearchLimit);
+    }
+
     // Test double
 
     static class StubLogDb extends LogDb {
@@ -89,6 +111,9 @@ public class AsyncLogDbTest {
         LogLevel lastMinLevel = null;
         long lastDeleteTimestamp = -1;
         boolean deleteAllCalled = false;
+        String lastSearchQuery = null;
+        LogLevel lastSearchMinLevel = null;
+        int lastSearchLimit = -1;
 
         StubLogDb() {
             super(null);
@@ -113,6 +138,22 @@ public class AsyncLogDbTest {
         @Override
         public List<LogEntry> getByMinLevel(LogLevel minLevel) {
             lastMinLevel = minLevel;
+            return new ArrayList<>(entries);
+        }
+
+        @Override
+        public List<LogEntry> search(String query, int limit) {
+            lastSearchQuery = query;
+            lastSearchMinLevel = null;
+            lastSearchLimit = limit;
+            return new ArrayList<>(entries);
+        }
+
+        @Override
+        public List<LogEntry> search(String query, LogLevel minLevel, int limit) {
+            lastSearchQuery = query;
+            lastSearchMinLevel = minLevel;
+            lastSearchLimit = limit;
             return new ArrayList<>(entries);
         }
 

@@ -64,6 +64,56 @@ public class LogDb {
     }
 
     /**
+     * Returns log entries matching the search query in message or stack trace.
+     *
+     * @param query search text (matched via SQL LIKE, case-insensitive)
+     * @param limit maximum number of entries to return
+     */
+    public List<LogEntry> search(String query, int limit) {
+        return search(query, null, limit);
+    }
+
+    /**
+     * Returns log entries matching the search query at or above the specified level.
+     *
+     * @param query search text (matched via SQL LIKE, case-insensitive)
+     * @param minLevel minimum log level to include, or null for all levels
+     * @param limit maximum number of entries to return
+     */
+    public List<LogEntry> search(String query, LogLevel minLevel, int limit) {
+        String pattern = "%" + escapeLikeWildcards(query) + "%";
+        String searchClause =
+                "message LIKE ? ESCAPE '\\' OR (stack_trace IS NOT NULL AND stack_trace LIKE ? ESCAPE '\\')";
+        String whereClause;
+        String[] whereArgs;
+
+        if (minLevel != null) {
+            String[] levels = getLevelsAtOrAbove(minLevel);
+            String placeholders = SqlUtils.buildPlaceholders(levels.length);
+            whereClause = "(" + searchClause + ") AND level IN (" + placeholders + ")";
+            whereArgs = new String[2 + levels.length];
+            whereArgs[0] = pattern;
+            whereArgs[1] = pattern;
+            System.arraycopy(levels, 0, whereArgs, 2, levels.length);
+        } else {
+            whereClause = searchClause;
+            whereArgs = new String[]{pattern, pattern};
+        }
+
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+        try (Cursor cursor = db.query(
+                "logs",
+                null,
+                whereClause,
+                whereArgs,
+                null, null,
+                "timestamp DESC",
+                String.valueOf(limit))) {
+            return SqlUtils.map(cursor, this::fromCursor);
+        }
+    }
+
+    /**
      * Returns log entries at or above the specified level.
      *
      * @param minLevel minimum log level to include
@@ -130,5 +180,13 @@ public class LogDb {
             result[i - startIndex] = all[i].name();
         }
         return result;
+    }
+
+    private static String escapeLikeWildcards(String input) {
+        if (input == null) return "";
+        return input
+                .replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_");
     }
 }

@@ -128,6 +128,7 @@
 
     <!-- Log list -->
     <string name="log_list_title">Logs</string>
+    <string name="log_search_hint">Search message or stack trace</string>
     <string name="empty_log_list">No log entries</string>
     <string name="empty_log_list_hint">Logs will appear as the app runs</string>
     <string name="clear_logs">Clear logs</string>

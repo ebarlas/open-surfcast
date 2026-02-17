@@ -55,6 +55,27 @@ public class AsyncLogDb {
     }
 
     /**
+     * Returns log entries matching the search query asynchronously.
+     *
+     * @param query search text (matched in message and stack trace)
+     * @param limit maximum number of entries to return
+     */
+    public CompletableFuture<List<LogEntry>> search(String query, int limit) {
+        return CompletableFuture.supplyAsync(() -> logDb.search(query, limit), executor);
+    }
+
+    /**
+     * Returns log entries matching the search query at or above the specified level asynchronously.
+     *
+     * @param query search text (matched in message and stack trace)
+     * @param minLevel minimum log level to include, or null for all levels
+     * @param limit maximum number of entries to return
+     */
+    public CompletableFuture<List<LogEntry>> search(String query, LogLevel minLevel, int limit) {
+        return CompletableFuture.supplyAsync(() -> logDb.search(query, minLevel, limit), executor);
+    }
+
+    /**
      * Deletes log entries older than the specified timestamp asynchronously.
      */
     public void deleteOlderThan(long timestamp) {

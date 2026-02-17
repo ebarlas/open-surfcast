@@ -151,4 +151,90 @@ public class LogDbTest {
         assertTrue(results.get(1).getId() > 0);
         assertTrue(results.get(0).getId() != results.get(1).getId());
     }
+
+    @Test
+    public void search_matchesMessage_returnsMatchingEntries() {
+        logDb.insert(new LogEntry(1000L, LogLevel.INFO, "Connection timeout", null));
+        logDb.insert(new LogEntry(2000L, LogLevel.INFO, "Sync completed", null));
+        logDb.insert(new LogEntry(3000L, LogLevel.INFO, "Connection refused", null));
+
+        List<LogEntry> results = logDb.search("Connection", 10);
+
+        assertEquals(2, results.size());
+        assertTrue(results.get(0).getMessage().contains("Connection"));
+        assertTrue(results.get(1).getMessage().contains("Connection"));
+    }
+
+    @Test
+    public void search_matchesStackTrace_returnsMatchingEntries() {
+        logDb.insert(new LogEntry(1000L, LogLevel.INFO, "OK", null));
+        logDb.insert(new LogEntry(2000L, LogLevel.ERROR, "Failed", "java.net.UnknownHostException\n\tat Foo.bar"));
+
+        List<LogEntry> results = logDb.search("UnknownHostException", 10);
+
+        assertEquals(1, results.size());
+        assertEquals("Failed", results.get(0).getMessage());
+        assertTrue(results.get(0).getStackTrace().contains("UnknownHostException"));
+    }
+
+    @Test
+    public void search_withLevelFilter_combinesSearchAndLevel() {
+        logDb.insert(new LogEntry(1000L, LogLevel.DEBUG, "Error in debug", null));
+        logDb.insert(new LogEntry(2000L, LogLevel.INFO, "Error in info", null));
+        logDb.insert(new LogEntry(3000L, LogLevel.WARN, "Error in warn", null));
+        logDb.insert(new LogEntry(4000L, LogLevel.ERROR, "Error in error", null));
+
+        List<LogEntry> results = logDb.search("Error", LogLevel.WARN, 10);
+
+        assertEquals(2, results.size());
+        assertEquals("Error in error", results.get(0).getMessage());
+        assertEquals("Error in warn", results.get(1).getMessage());
+    }
+
+    @Test
+    public void search_returnsNewestFirst() {
+        logDb.insert(new LogEntry(1000L, LogLevel.INFO, "Match first", null));
+        logDb.insert(new LogEntry(2000L, LogLevel.INFO, "Match second", null));
+        logDb.insert(new LogEntry(3000L, LogLevel.INFO, "Match third", null));
+
+        List<LogEntry> results = logDb.search("Match", 10);
+
+        assertEquals(3, results.size());
+        assertEquals("Match third", results.get(0).getMessage());
+        assertEquals("Match second", results.get(1).getMessage());
+        assertEquals("Match first", results.get(2).getMessage());
+    }
+
+    @Test
+    public void search_limitsResults() {
+        logDb.insert(new LogEntry(1000L, LogLevel.INFO, "Match A", null));
+        logDb.insert(new LogEntry(2000L, LogLevel.INFO, "Match B", null));
+        logDb.insert(new LogEntry(3000L, LogLevel.INFO, "Match C", null));
+
+        List<LogEntry> results = logDb.search("Match", 2);
+
+        assertEquals(2, results.size());
+        assertEquals("Match C", results.get(0).getMessage());
+        assertEquals("Match B", results.get(1).getMessage());
+    }
+
+    @Test
+    public void search_escapesWildcards_doesNotTreatAsWildcard() {
+        logDb.insert(new LogEntry(1000L, LogLevel.INFO, "50% complete", null));
+        logDb.insert(new LogEntry(2000L, LogLevel.INFO, "All done", null));
+
+        List<LogEntry> results = logDb.search("50%", 10);
+
+        assertEquals(1, results.size());
+        assertEquals("50% complete", results.get(0).getMessage());
+    }
+
+    @Test
+    public void search_noMatch_returnsEmpty() {
+        logDb.insert(new LogEntry(1000L, LogLevel.INFO, "No match here", null));
+
+        List<LogEntry> results = logDb.search("xyzzy", 10);
+
+        assertTrue(results.isEmpty());
+    }
 }
