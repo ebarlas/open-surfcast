@@ -291,20 +291,22 @@ public class TideDetailFragment extends Fragment {
         
         long startEpochSeconds = centerEpochSeconds - halfWindowSeconds;
         long endEpochSeconds = centerEpochSeconds + halfWindowSeconds;
+        long baseEpoch = startEpochSeconds;
 
-        // Generate interpolated samples
+        // Generate interpolated samples (X = seconds since baseEpoch for float precision)
         List<Entry> interpolatedEntries = generateInterpolatedSamples(
-                startEpochSeconds, endEpochSeconds, useMetric);
+                startEpochSeconds, endEpochSeconds, baseEpoch, useMetric);
 
         // Collect tide shift markers within the time window
         List<Entry> highTideEntries = new ArrayList<>();
         List<Entry> lowTideEntries = new ArrayList<>();
-        
+
         for (TidePrediction pred : allPredictions) {
             if (pred.epochSeconds >= startEpochSeconds && pred.epochSeconds <= endEpochSeconds) {
+                float x = (float) (pred.epochSeconds - baseEpoch);
                 double displayValue = useMetric ? pred.value : pred.value * METERS_TO_FEET;
-                Entry entry = new Entry(pred.epochSeconds, (float) displayValue);
-                
+                Entry entry = new Entry(x, (float) displayValue);
+
                 if (pred.isHighTide()) {
                     highTideEntries.add(entry);
                 } else {
@@ -318,7 +320,7 @@ public class TideDetailFragment extends Fragment {
             return;
         }
 
-        View chart = createCombinedChart(interpolatedEntries, highTideEntries, lowTideEntries, useMetric);
+        View chart = createCombinedChart(interpolatedEntries, highTideEntries, lowTideEntries, useMetric, baseEpoch);
 
         if (chart != null) {
             currentChart = chart;
@@ -328,15 +330,17 @@ public class TideDetailFragment extends Fragment {
 
     /**
      * Generates interpolated water level samples at 20-minute intervals.
+     * X is stored as (epochSeconds - baseEpoch) so float preserves precision.
      */
-    private List<Entry> generateInterpolatedSamples(long startEpoch, long endEpoch, boolean useMetric) {
+    private List<Entry> generateInterpolatedSamples(long startEpoch, long endEpoch,
+                                                    long baseEpoch, boolean useMetric) {
         List<Entry> entries = new ArrayList<>();
 
         for (long t = startEpoch; t <= endEpoch; t += SAMPLE_INTERVAL_SECONDS) {
             Double level = TideLevelInterpolator.interpolate(allPredictions, t);
             if (level != null) {
                 double displayValue = useMetric ? level : level * METERS_TO_FEET;
-                entries.add(new Entry(t, (float) displayValue));
+                entries.add(new Entry((float) (t - baseEpoch), (float) displayValue));
             }
         }
 
@@ -349,7 +353,8 @@ public class TideDetailFragment extends Fragment {
     private View createCombinedChart(List<Entry> lineEntries,
                                      List<Entry> highTideEntries,
                                      List<Entry> lowTideEntries,
-                                     boolean useMetric) {
+                                     boolean useMetric,
+                                     long baseEpochSeconds) {
         CombinedChart chart = new CombinedChart(requireContext());
         chart.setLayoutParams(new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -432,11 +437,11 @@ public class TideDetailFragment extends Fragment {
         Legend legend = chart.getLegend();
         legend.setEnabled(false);
 
-        configureXAxis(chart);
-        addCurrentTimeLine(chart);
+        configureXAxis(chart, baseEpochSeconds);
+        addCurrentTimeLine(chart, baseEpochSeconds);
         configureYAxis(chart);
 
-        attachMarker(chart, createValueMarker(unit));
+        attachMarker(chart, createValueMarker(unit, baseEpochSeconds));
 
         chart.invalidate();
 
@@ -472,7 +477,7 @@ public class TideDetailFragment extends Fragment {
         return dataSet;
     }
 
-    private void configureXAxis(CombinedChart chart) {
+    private void configureXAxis(CombinedChart chart, long baseEpochSeconds) {
         int axisTextColor = resolveColor(com.google.android.material.R.attr.colorOnSurfaceVariant);
         int gridColor = resolveColor(com.google.android.material.R.attr.colorOutlineVariant);
 
@@ -492,6 +497,7 @@ public class TideDetailFragment extends Fragment {
         String pattern = shortRange ? "M/d h:mm a" : "MMM d";
         xAxis.setGranularity(shortRange ? 3600f : 86400f);
 
+        final long base = baseEpochSeconds;
         xAxis.setValueFormatter(new ValueFormatter() {
             private final SimpleDateFormat fmt = new SimpleDateFormat(pattern, Locale.getDefault());
 
@@ -501,7 +507,7 @@ public class TideDetailFragment extends Fragment {
 
             @Override
             public String getFormattedValue(float value) {
-                return fmt.format(new Date((long) value * 1000L));
+                return fmt.format(new Date((base + (long) value) * 1000L));
             }
         });
     }
@@ -522,13 +528,15 @@ public class TideDetailFragment extends Fragment {
 
     /**
      * Adds a vertical dashed line at the current time on the X-axis.
+     * X-axis is in offset seconds (since baseEpochSeconds).
      */
-    private void addCurrentTimeLine(CombinedChart chart) {
-        float nowEpochSeconds = System.currentTimeMillis() / 1000f;
+    private void addCurrentTimeLine(CombinedChart chart, long baseEpochSeconds) {
+        long nowEpochSeconds = System.currentTimeMillis() / 1000L;
+        float nowOffset = nowEpochSeconds - baseEpochSeconds;
 
         int lineColor = resolveColor(com.google.android.material.R.attr.colorError);
 
-        LimitLine nowLine = new LimitLine(nowEpochSeconds);
+        LimitLine nowLine = new LimitLine(nowOffset);
         nowLine.setLineColor(lineColor);
         nowLine.setLineWidth(1.5f);
         nowLine.enableDashedLine(10f, 6f, 0f);
@@ -548,11 +556,11 @@ public class TideDetailFragment extends Fragment {
     /**
      * Creates a marker that formats values as "5.2 unit".
      */
-    private ChartMarkerView createValueMarker(String unit) {
+    private ChartMarkerView createValueMarker(String unit, long baseEpochSeconds) {
         return new ChartMarkerView(requireContext(), yValue -> {
             String formatted = formatValue(yValue);
             return unit != null && !unit.isEmpty() ? formatted + " " + unit : formatted;
-        });
+        }, baseEpochSeconds);
     }
 
     /**

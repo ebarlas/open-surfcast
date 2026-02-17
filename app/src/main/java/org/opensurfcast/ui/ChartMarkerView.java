@@ -37,16 +37,30 @@ public class ChartMarkerView extends MarkerView {
     private final SimpleDateFormat dateFormat =
             new SimpleDateFormat("MMM d, yyyy  HH:mm", Locale.US);
     private final ValueFormatter valueFormatter;
+    /** If non-zero, X is seconds since this epoch (avoids float precision loss for large epoch seconds). */
+    private final long baseEpochSeconds;
 
     /**
-     * Creates a marker view.
+     * Creates a marker view with X-axis as absolute epoch seconds.
      *
      * @param context        the context
      * @param valueFormatter formats the Y-value for display
      */
     public ChartMarkerView(Context context, ValueFormatter valueFormatter) {
+        this(context, valueFormatter, 0L);
+    }
+
+    /**
+     * Creates a marker view.
+     *
+     * @param context           the context
+     * @param valueFormatter    formats the Y-value for display
+     * @param baseEpochSeconds  if non-zero, entry X is (epoch seconds - baseEpochSeconds) for precision
+     */
+    public ChartMarkerView(Context context, ValueFormatter valueFormatter, long baseEpochSeconds) {
         super(context, R.layout.chart_marker_view);
         this.valueFormatter = valueFormatter;
+        this.baseEpochSeconds = baseEpochSeconds;
 
         dateText = findViewById(R.id.marker_date);
         valueText = findViewById(R.id.marker_value);
@@ -82,8 +96,11 @@ public class ChartMarkerView extends MarkerView {
 
     @Override
     public void refreshContent(Entry e, Highlight highlight) {
-        // X-axis is epoch seconds
-        long epochMillis = (long) e.getX() * 1000L;
+        // When baseEpochSeconds != 0, X is offset seconds for float precision; else absolute epoch
+        long epochSec = baseEpochSeconds != 0
+                ? baseEpochSeconds + (long) e.getX()
+                : (long) e.getX();
+        long epochMillis = epochSec * 1000L;
         dateText.setText(dateFormat.format(new Date(epochMillis)));
         valueText.setText(valueFormatter.format(e.getY()));
 

@@ -432,19 +432,25 @@ public class ChartFullScreenFragment extends Fragment {
                                       Function<BuoyStdMetData, Double> extractor) {
         if (allStdMetData == null) return null;
 
+        long baseEpoch = Long.MAX_VALUE;
+        for (BuoyStdMetData d : allStdMetData) {
+            if (d.getEpochSeconds() < cutoff) continue;
+            if (extractor.apply(d) != null && d.getEpochSeconds() < baseEpoch)
+                baseEpoch = d.getEpochSeconds();
+        }
+        if (baseEpoch == Long.MAX_VALUE) return null;
+
         List<Entry> entries = new ArrayList<>();
         for (BuoyStdMetData d : allStdMetData) {
             if (d.getEpochSeconds() < cutoff) continue;
             Double val = extractor.apply(d);
-            if (val != null) {
-                entries.add(new Entry(d.getEpochSeconds(), val.floatValue()));
-            }
+            if (val != null)
+                entries.add(new Entry((float) (d.getEpochSeconds() - baseEpoch), val.floatValue()));
         }
-
         if (entries.isEmpty()) return null;
 
         int color = resolveColor(com.google.android.material.R.attr.colorPrimary);
-        return createFullScreenLineChart(entries, label, color, null, null, null, unit);
+        return createFullScreenLineChart(entries, label, color, null, null, null, unit, baseEpoch);
     }
 
     // ========================================================================
@@ -455,19 +461,25 @@ public class ChartFullScreenFragment extends Fragment {
                                         Function<BuoySpecWaveData, Double> extractor) {
         if (allSpecWaveData == null) return null;
 
+        long baseEpoch = Long.MAX_VALUE;
+        for (BuoySpecWaveData d : allSpecWaveData) {
+            if (d.getEpochSeconds() < cutoff) continue;
+            if (extractor.apply(d) != null && d.getEpochSeconds() < baseEpoch)
+                baseEpoch = d.getEpochSeconds();
+        }
+        if (baseEpoch == Long.MAX_VALUE) return null;
+
         List<Entry> entries = new ArrayList<>();
         for (BuoySpecWaveData d : allSpecWaveData) {
             if (d.getEpochSeconds() < cutoff) continue;
             Double val = extractor.apply(d);
-            if (val != null) {
-                entries.add(new Entry(d.getEpochSeconds(), val.floatValue()));
-            }
+            if (val != null)
+                entries.add(new Entry((float) (d.getEpochSeconds() - baseEpoch), val.floatValue()));
         }
-
         if (entries.isEmpty()) return null;
 
         int color = resolveColor(com.google.android.material.R.attr.colorPrimary);
-        return createFullScreenLineChart(entries, label, color, null, null, null, unit);
+        return createFullScreenLineChart(entries, label, color, null, null, null, unit, baseEpoch);
     }
 
     // ========================================================================
@@ -477,22 +489,28 @@ public class ChartFullScreenFragment extends Fragment {
     private View buildWindSpeedGustChart(long cutoff, boolean useMetric) {
         if (allStdMetData == null) return null;
 
-        List<Entry> speedEntries = new ArrayList<>();
-        List<Entry> gustEntries = new ArrayList<>();
-
+        long baseEpoch = Long.MAX_VALUE;
         for (BuoyStdMetData d : allStdMetData) {
             if (d.getEpochSeconds() < cutoff) continue;
-            float epoch = d.getEpochSeconds();
+            if ((d.getWindSpeed() != null || d.getGustSpeed() != null) && d.getEpochSeconds() < baseEpoch)
+                baseEpoch = d.getEpochSeconds();
+        }
+        if (baseEpoch == Long.MAX_VALUE) return null;
+
+        List<Entry> speedEntries = new ArrayList<>();
+        List<Entry> gustEntries = new ArrayList<>();
+        for (BuoyStdMetData d : allStdMetData) {
+            if (d.getEpochSeconds() < cutoff) continue;
+            long epoch = d.getEpochSeconds();
             if (d.getWindSpeed() != null) {
                 double speed = useMetric ? d.getWindSpeed() : d.getWindSpeed() * MPS_TO_MPH;
-                speedEntries.add(new Entry(epoch, (float) speed));
+                speedEntries.add(new Entry((float) (epoch - baseEpoch), (float) speed));
             }
             if (d.getGustSpeed() != null) {
                 double gust = useMetric ? d.getGustSpeed() : d.getGustSpeed() * MPS_TO_MPH;
-                gustEntries.add(new Entry(epoch, (float) gust));
+                gustEntries.add(new Entry((float) (epoch - baseEpoch), (float) gust));
             }
         }
-
         if (speedEntries.isEmpty() && gustEntries.isEmpty()) return null;
 
         int primaryColor = resolveColor(com.google.android.material.R.attr.colorPrimary);
@@ -501,7 +519,7 @@ public class ChartFullScreenFragment extends Fragment {
 
         return createFullScreenLineChart(
                 speedEntries, "Wind Speed", primaryColor,
-                gustEntries, "Gust", tertiaryColor, windUnit);
+                gustEntries, "Gust", tertiaryColor, windUnit, baseEpoch);
     }
 
     // ========================================================================
@@ -511,16 +529,24 @@ public class ChartFullScreenFragment extends Fragment {
     private View buildPressureTendencyChart(long cutoff, boolean useMetric) {
         if (allStdMetData == null) return null;
 
+        long baseEpoch = Long.MAX_VALUE;
+        for (BuoyStdMetData d : allStdMetData) {
+            if (d.getEpochSeconds() < cutoff) continue;
+            if (d.getPressureTendency() != null && d.getEpochSeconds() < baseEpoch)
+                baseEpoch = d.getEpochSeconds();
+        }
+        if (baseEpoch == Long.MAX_VALUE) return null;
+
         List<BarEntry> entries = new ArrayList<>();
         for (BuoyStdMetData d : allStdMetData) {
             if (d.getEpochSeconds() < cutoff) continue;
             if (d.getPressureTendency() != null) {
+                long epoch = d.getEpochSeconds();
                 double value = useMetric ? d.getPressureTendency()
                         : d.getPressureTendency() * HPA_TO_INHG;
-                entries.add(new BarEntry(d.getEpochSeconds(), (float) value));
+                entries.add(new BarEntry((float) (epoch - baseEpoch), (float) value));
             }
         }
-
         if (entries.isEmpty()) return null;
 
         int primaryColor = resolveColor(com.google.android.material.R.attr.colorPrimary);
@@ -558,11 +584,11 @@ public class ChartFullScreenFragment extends Fragment {
         }
 
         chart.setData(barData);
-        configureXAxis(chart);
+        configureXAxis(chart, baseEpoch);
         configureYAxis(chart);
 
         String pressureUnit = useMetric ? "hPa" : "inHg";
-        attachMarker(chart, createSignedValueMarker(pressureUnit));
+        attachMarker(chart, createSignedValueMarker(pressureUnit, baseEpoch));
         chart.invalidate();
 
         return chart;
@@ -575,6 +601,14 @@ public class ChartFullScreenFragment extends Fragment {
     private View buildSteepnessChart(long cutoff) {
         if (allSpecWaveData == null) return null;
 
+        long baseEpoch = Long.MAX_VALUE;
+        for (BuoySpecWaveData d : allSpecWaveData) {
+            if (d.getEpochSeconds() < cutoff) continue;
+            if (steepnessToOrdinal(d.getSteepness()) > 0 && d.getEpochSeconds() < baseEpoch)
+                baseEpoch = d.getEpochSeconds();
+        }
+        if (baseEpoch == Long.MAX_VALUE) return null;
+
         List<Entry> swellEntries = new ArrayList<>();
         List<Entry> averageEntries = new ArrayList<>();
         List<Entry> steepEntries = new ArrayList<>();
@@ -584,7 +618,7 @@ public class ChartFullScreenFragment extends Fragment {
             if (d.getEpochSeconds() < cutoff) continue;
             int ordinal = steepnessToOrdinal(d.getSteepness());
             if (ordinal <= 0) continue;
-            Entry entry = new Entry(d.getEpochSeconds(), ordinal);
+            Entry entry = new Entry((float) (d.getEpochSeconds() - baseEpoch), ordinal);
             switch (ordinal) {
                 case 1: swellEntries.add(entry); break;
                 case 2: averageEntries.add(entry); break;
@@ -633,7 +667,7 @@ public class ChartFullScreenFragment extends Fragment {
         legend.setTextSize(12f);
         legend.setWordWrapEnabled(true);
 
-        configureXAxis(chart);
+        configureXAxis(chart, baseEpoch);
 
         // Custom Y-axis: fixed range 1-4 with category labels
         int axisTextColor = resolveColor(com.google.android.material.R.attr.colorOnSurfaceVariant);
@@ -658,7 +692,7 @@ public class ChartFullScreenFragment extends Fragment {
         chart.getAxisRight().setEnabled(false);
 
         ChartMarkerView marker = new ChartMarkerView(requireContext(),
-                yValue -> ordinalToSteepness(Math.round(yValue)));
+                yValue -> ordinalToSteepness(Math.round(yValue)), baseEpoch);
         marker.setChartView(chart);
         chart.setMarker(marker);
 
@@ -673,12 +707,13 @@ public class ChartFullScreenFragment extends Fragment {
 
     /**
      * Creates a full-screen LineChart with optional second dataset.
+     * Entry X values are seconds since baseEpochSeconds for float precision.
      */
     private View createFullScreenLineChart(List<Entry> entries, String label, int color,
                                            @Nullable List<Entry> secondEntries,
                                            @Nullable String secondLabel,
                                            @Nullable Integer secondColor,
-                                           String unit) {
+                                           String unit, long baseEpochSeconds) {
         LineChart chart = new LineChart(requireContext());
         chart.setLayoutParams(new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -715,9 +750,9 @@ public class ChartFullScreenFragment extends Fragment {
         }
 
         chart.setData(lineData);
-        configureXAxis(chart);
+        configureXAxis(chart, baseEpochSeconds);
         configureYAxis(chart);
-        attachMarker(chart, createValueMarker(unit));
+        attachMarker(chart, createValueMarker(unit, baseEpochSeconds));
         chart.invalidate();
 
         return chart;
@@ -742,21 +777,21 @@ public class ChartFullScreenFragment extends Fragment {
     /**
      * Creates a marker that formats values as "5.2 unit".
      */
-    private ChartMarkerView createValueMarker(String unit) {
+    private ChartMarkerView createValueMarker(String unit, long baseEpochSeconds) {
         return new ChartMarkerView(requireContext(), yValue -> {
             String formatted = formatValue(yValue);
             return unit != null && !unit.isEmpty() ? formatted + " " + unit : formatted;
-        });
+        }, baseEpochSeconds);
     }
 
     /**
      * Creates a marker that formats signed values as "+0.3 unit".
      */
-    private ChartMarkerView createSignedValueMarker(String unit) {
+    private ChartMarkerView createSignedValueMarker(String unit, long baseEpochSeconds) {
         return new ChartMarkerView(requireContext(), yValue -> {
             String formatted = formatSignedValue(yValue);
             return unit != null && !unit.isEmpty() ? formatted + " " + unit : formatted;
-        });
+        }, baseEpochSeconds);
     }
 
     /**
@@ -797,7 +832,7 @@ public class ChartFullScreenFragment extends Fragment {
         return dataSet;
     }
 
-    private void configureXAxis(BarLineChartBase<?> chart) {
+    private void configureXAxis(BarLineChartBase<?> chart, long baseEpochSeconds) {
         int axisTextColor = resolveColor(com.google.android.material.R.attr.colorOnSurfaceVariant);
         int gridColor = resolveColor(com.google.android.material.R.attr.colorOutlineVariant);
 
@@ -817,6 +852,7 @@ public class ChartFullScreenFragment extends Fragment {
         String pattern = shortRange ? "M/d h:mm a" : "MMM d";
         xAxis.setGranularity(shortRange ? 3600f : 86400f);
 
+        final long base = baseEpochSeconds;
         xAxis.setValueFormatter(new ValueFormatter() {
             private final SimpleDateFormat fmt = new SimpleDateFormat(pattern, Locale.getDefault());
 
@@ -826,7 +862,7 @@ public class ChartFullScreenFragment extends Fragment {
 
             @Override
             public String getFormattedValue(float value) {
-                return fmt.format(new Date((long) value * 1000L));
+                return fmt.format(new Date((base + (long) value) * 1000L));
             }
         });
     }
