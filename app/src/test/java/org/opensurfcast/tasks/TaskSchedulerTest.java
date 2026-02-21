@@ -48,7 +48,7 @@ public class TaskSchedulerTest {
 
     @Test
     public void submit_ignoresDuplicateKey() throws InterruptedException {
-        TestTask task1 = new TestTask();
+        DelayTestTask task1 = new DelayTestTask(); // runs at least 10ms so duplicate is ignored
         TestTask task2 = new TestTask();
 
         scheduler.submit(task1);
@@ -140,6 +140,27 @@ public class TaskSchedulerTest {
 
         @Override
         public Object call() {
+            executed = true;
+            return null;
+        }
+    }
+
+    /** Runs for at least 10ms so duplicate-key test can submit second task while first is still running. */
+    static class DelayTestTask extends BaseTask {
+        volatile boolean executed = false;
+
+        DelayTestTask() {
+            super(Duration.ZERO);
+        }
+
+        @Override
+        public String getKey() {
+            return "TestTask";
+        }
+
+        @Override
+        public Object call() throws InterruptedException {
+            Thread.sleep(10);
             executed = true;
             return null;
         }
