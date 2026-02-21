@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -48,12 +49,13 @@ public class TaskSchedulerTest {
 
     @Test
     public void submit_ignoresDuplicateKey() throws InterruptedException {
-        DelayTestTask task1 = new DelayTestTask(); // runs at least 10ms so duplicate is ignored
+        BlockingTestTask task1 = new BlockingTestTask(); // blocks until we release, so it can't finish before submit(task2)
         TestTask task2 = new TestTask();
 
         scheduler.submit(task1);
-        scheduler.submit(task2); // Same key, should be ignored
-
+        task1.awaitStarted();
+        scheduler.submit(task2); // Same key, must be ignored while task1 is still running
+        task1.release();
         waitForCompletion();
 
         assertTrue(task1.executed);
@@ -145,11 +147,13 @@ public class TaskSchedulerTest {
         }
     }
 
-    /** Runs for at least 10ms so duplicate-key test can submit second task while first is still running. */
-    static class DelayTestTask extends BaseTask {
+    /** Blocks in call() until release(); key "TestTask". Cannot finish before test submits duplicate. */
+    static class BlockingTestTask extends BaseTask {
+        final CountDownLatch started = new CountDownLatch(1);
+        final CountDownLatch release = new CountDownLatch(1);
         volatile boolean executed = false;
 
-        DelayTestTask() {
+        BlockingTestTask() {
             super(Duration.ZERO);
         }
 
@@ -158,9 +162,18 @@ public class TaskSchedulerTest {
             return "TestTask";
         }
 
+        void awaitStarted() throws InterruptedException {
+            started.await();
+        }
+
+        void release() {
+            release.countDown();
+        }
+
         @Override
         public Object call() throws InterruptedException {
-            Thread.sleep(10);
+            started.countDown();
+            release.await();
             executed = true;
             return null;
         }
