@@ -35,7 +35,7 @@ public class ChartMarkerView extends MarkerView {
     private final TextView dateText;
     private final TextView valueText;
     private final SimpleDateFormat dateFormat =
-            new SimpleDateFormat("MMM d, yyyy  HH:mm", Locale.US);
+            new SimpleDateFormat("MMM d, yyyy  h:mm a", Locale.getDefault());
     private final ValueFormatter valueFormatter;
     /** If non-zero, X is seconds since this epoch (avoids float precision loss for large epoch seconds). */
     private final long baseEpochSeconds;
