@@ -139,8 +139,9 @@ public class TaskSchedulerTest {
         }
 
         @Override
-        protected void execute() {
+        public Object call() {
             executed = true;
+            return null;
         }
     }
 
@@ -154,13 +155,14 @@ public class TaskSchedulerTest {
         }
 
         @Override
-        protected void execute() throws InterruptedException {
+        public Object call() throws InterruptedException {
             synchronized (lock) {
                 while (blocked) {
                     lock.wait();
                 }
             }
             executed = true;
+            return null;
         }
 
         void unblock() {
@@ -177,7 +179,7 @@ public class TaskSchedulerTest {
         }
 
         @Override
-        protected void execute() throws Exception {
+        public Object call() throws Exception {
             throw new RuntimeException("Test failure");
         }
     }
