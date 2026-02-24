@@ -3,11 +3,13 @@ package org.opensurfcast.ui;
 import android.content.res.Configuration;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.FrameLayout;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -35,6 +37,7 @@ import com.github.mikephil.charting.formatter.ValueFormatter;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.color.MaterialColors;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
+import com.google.android.material.slider.Slider;
 
 import org.opensurfcast.MainActivity;
 import org.opensurfcast.R;
@@ -54,10 +57,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 
 /**
- * Fragment displaying a single metric chart in full-screen view with pan and
- * pinch-zoom. The chart always shows the full data range; the default view
- * is zoomed to the last 1 day. Opened when a user taps a chart tile in
- * {@link BuoyDetailFragment}.
+ * Fragment displaying a single metric chart in full-screen view with pan,
+ * pinch-zoom, and a lookback-days slider. Opened when a user taps a chart
+ * tile in {@link BuoyDetailFragment}.
  */
 public class ChartFullScreenFragment extends Fragment {
 
@@ -103,10 +105,9 @@ public class ChartFullScreenFragment extends Fragment {
 
     private MaterialToolbar toolbar;
     private LinearProgressIndicator loadingProgress;
+    private Slider lookbackSlider;
+    private TextView lookbackValue;
     private FrameLayout chartContainer;
-
-    /** Default visible X range in seconds (1 day). */
-    private static final float DEFAULT_VISIBLE_X_RANGE_SECONDS = 86400f;
 
     // -- Dependencies & state ----------------------------------------------------
 
@@ -178,7 +179,20 @@ public class ChartFullScreenFragment extends Fragment {
         });
 
         loadingProgress = view.findViewById(R.id.loading_progress);
+        lookbackSlider = view.findViewById(R.id.lookback_slider);
+        lookbackValue = view.findViewById(R.id.lookback_value);
         chartContainer = view.findViewById(R.id.chart_container);
+
+        // Initialise the lookback label
+        updateLookbackLabel((int) lookbackSlider.getValue());
+
+        lookbackSlider.addOnChangeListener((slider, value, fromUser) -> {
+            int days = (int) value;
+            updateLookbackLabel(days);
+            if (fromUser) {
+                rebuildChart();
+            }
+        });
 
         String stationId = requireArguments().getString(ARG_STATION_ID);
         String metricKey = requireArguments().getString(ARG_METRIC_KEY);
@@ -207,6 +221,7 @@ public class ChartFullScreenFragment extends Fragment {
         immersiveMode = true;
 
         ((View) toolbar.getParent()).setVisibility(View.GONE);
+        view.findViewById(R.id.lookback_row).setVisibility(View.GONE);
         loadingProgress.setVisibility(View.GONE);
 
         ((MainActivity) requireActivity()).setBottomNavigationVisible(false);
@@ -257,8 +272,8 @@ public class ChartFullScreenFragment extends Fragment {
     // ========================================================================
 
     /**
-     * Rebuilds the chart using the full in-memory data. Default visible range
-     * is the last 1 day; user can pan and zoom to the full range.
+     * Rebuilds the chart using the current lookback slider value and the
+     * full in-memory data lists. Called on initial load and on slider change.
      */
     private void rebuildChart() {
         if (chartContainer == null) return;
@@ -271,47 +286,49 @@ public class ChartFullScreenFragment extends Fragment {
 
         String metricKey = requireArguments().getString(ARG_METRIC_KEY);
         boolean useMetric = userPreferences.isMetric();
+        int lookbackDays = (int) lookbackSlider.getValue();
+        long cutoff = System.currentTimeMillis() / 1000L - (long) lookbackDays * 86400L;
 
         View chart;
 
         switch (metricKey) {
             // ---- StdMet line charts ----
             case METRIC_STD_WAVE_HEIGHT:
-                chart = buildStdMetLineChart("Wave Height",
+                chart = buildStdMetLineChart(cutoff, "Wave Height",
                         useMetric ? "m" : "ft",
                         d -> d.getWaveHeight() == null ? null
                                 : useMetric ? d.getWaveHeight() : d.getWaveHeight() * METERS_TO_FEET);
                 break;
 
             case METRIC_STD_DOM_WAVE_PERIOD:
-                chart = buildStdMetLineChart("Dominant Wave Period", "s",
-                        BuoyStdMetData::getDominantWavePeriod);
+                chart = buildStdMetLineChart(cutoff, "Dominant Wave Period", "s",
+                        d -> d.getDominantWavePeriod());
                 break;
 
             case METRIC_STD_AVG_WAVE_PERIOD:
-                chart = buildStdMetLineChart("Average Wave Period", "s",
-                        BuoyStdMetData::getAverageWavePeriod);
+                chart = buildStdMetLineChart(cutoff, "Average Wave Period", "s",
+                        d -> d.getAverageWavePeriod());
                 break;
 
             case METRIC_STD_WIND_DIRECTION:
-                chart = buildStdMetLineChart("Wind Direction", "°",
+                chart = buildStdMetLineChart(cutoff, "Wind Direction", "°",
                         d -> d.getWindDirection() == null ? null : (double) d.getWindDirection());
                 break;
 
             case METRIC_STD_MEAN_WAVE_DIR:
-                chart = buildStdMetLineChart("Mean Wave Direction", "°",
+                chart = buildStdMetLineChart(cutoff, "Mean Wave Direction", "°",
                         d -> d.getMeanWaveDirection() == null ? null : (double) d.getMeanWaveDirection());
                 break;
 
             case METRIC_STD_PRESSURE:
-                chart = buildStdMetLineChart("Sea Level Pressure",
+                chart = buildStdMetLineChart(cutoff, "Sea Level Pressure",
                         useMetric ? "hPa" : "inHg",
                         d -> d.getPressure() == null ? null
                                 : useMetric ? d.getPressure() : d.getPressure() * HPA_TO_INHG);
                 break;
 
             case METRIC_STD_AIR_TEMP:
-                chart = buildStdMetLineChart("Air Temperature",
+                chart = buildStdMetLineChart(cutoff, "Air Temperature",
                         useMetric ? "°C" : "°F",
                         d -> d.getAirTemperature() == null ? null
                                 : useMetric ? d.getAirTemperature()
@@ -319,7 +336,7 @@ public class ChartFullScreenFragment extends Fragment {
                 break;
 
             case METRIC_STD_WATER_TEMP:
-                chart = buildStdMetLineChart("Water Temperature",
+                chart = buildStdMetLineChart(cutoff, "Water Temperature",
                         useMetric ? "°C" : "°F",
                         d -> d.getWaterTemperature() == null ? null
                                 : useMetric ? d.getWaterTemperature()
@@ -327,7 +344,7 @@ public class ChartFullScreenFragment extends Fragment {
                 break;
 
             case METRIC_STD_DEW_POINT:
-                chart = buildStdMetLineChart("Dew Point",
+                chart = buildStdMetLineChart(cutoff, "Dew Point",
                         useMetric ? "°C" : "°F",
                         d -> d.getDewPoint() == null ? null
                                 : useMetric ? d.getDewPoint()
@@ -335,12 +352,12 @@ public class ChartFullScreenFragment extends Fragment {
                 break;
 
             case METRIC_STD_VISIBILITY:
-                chart = buildStdMetLineChart("Visibility", "nmi",
-                        BuoyStdMetData::getVisibility);
+                chart = buildStdMetLineChart(cutoff, "Visibility", "nmi",
+                        d -> d.getVisibility());
                 break;
 
             case METRIC_STD_TIDE:
-                chart = buildStdMetLineChart("Tide",
+                chart = buildStdMetLineChart(cutoff, "Tide",
                         useMetric ? "m" : "ft",
                         d -> d.getTide() == null ? null
                                 : useMetric ? d.getTide() * FEET_TO_METERS : d.getTide());
@@ -348,28 +365,28 @@ public class ChartFullScreenFragment extends Fragment {
 
             // ---- StdMet special charts ----
             case METRIC_STD_WIND_SPEED_GUST:
-                chart = buildWindSpeedGustChart(useMetric);
+                chart = buildWindSpeedGustChart(cutoff, useMetric);
                 break;
 
             case METRIC_STD_PRESSURE_TENDENCY:
-                chart = buildPressureTendencyChart(useMetric);
+                chart = buildPressureTendencyChart(cutoff, useMetric);
                 break;
 
             // ---- SpecWave line charts ----
             case METRIC_SPEC_SWELL_HEIGHT:
-                chart = buildSpecWaveLineChart("Swell Height",
+                chart = buildSpecWaveLineChart(cutoff, "Swell Height",
                         useMetric ? "m" : "ft",
                         d -> d.getSwellHeight() == null ? null
                                 : useMetric ? d.getSwellHeight() : d.getSwellHeight() * METERS_TO_FEET);
                 break;
 
             case METRIC_SPEC_SWELL_PERIOD:
-                chart = buildSpecWaveLineChart("Swell Period", "s",
-                        BuoySpecWaveData::getSwellPeriod);
+                chart = buildSpecWaveLineChart(cutoff, "Swell Period", "s",
+                        d -> d.getSwellPeriod());
                 break;
 
             case METRIC_SPEC_WIND_WAVE_HEIGHT:
-                chart = buildSpecWaveLineChart("Wind Wave Height",
+                chart = buildSpecWaveLineChart(cutoff, "Wind Wave Height",
                         useMetric ? "m" : "ft",
                         d -> d.getWindWaveHeight() == null ? null
                                 : useMetric ? d.getWindWaveHeight()
@@ -377,24 +394,24 @@ public class ChartFullScreenFragment extends Fragment {
                 break;
 
             case METRIC_SPEC_WIND_WAVE_PERIOD:
-                chart = buildSpecWaveLineChart("Wind Wave Period", "s",
-                        BuoySpecWaveData::getWindWavePeriod);
+                chart = buildSpecWaveLineChart(cutoff, "Wind Wave Period", "s",
+                        d -> d.getWindWavePeriod());
                 break;
 
             case METRIC_SPEC_AVG_WAVE_PERIOD:
-                chart = buildSpecWaveLineChart("Average Wave Period", "s",
-                        BuoySpecWaveData::getAverageWavePeriod);
+                chart = buildSpecWaveLineChart(cutoff, "Average Wave Period", "s",
+                        d -> d.getAverageWavePeriod());
                 break;
 
             case METRIC_SPEC_MEAN_WAVE_DIR:
-                chart = buildSpecWaveLineChart("Mean Wave Direction", "°",
+                chart = buildSpecWaveLineChart(cutoff, "Mean Wave Direction", "°",
                         d -> d.getMeanWaveDirection() == null ? null
                                 : (double) d.getMeanWaveDirection());
                 break;
 
             // ---- SpecWave special charts ----
             case METRIC_SPEC_STEEPNESS:
-                chart = buildSteepnessChart();
+                chart = buildSteepnessChart(cutoff);
                 break;
 
             default:
@@ -403,32 +420,7 @@ public class ChartFullScreenFragment extends Fragment {
 
         if (chart != null) {
             currentChart = chart;
-            if (chart instanceof BarLineChartBase) {
-                setDefaultViewportLastOneDay((BarLineChartBase<?>) chart);
-            }
             chartContainer.addView(chart);
-        }
-    }
-
-    /**
-     * Sets visible X range limits (full data range) and positions the view to show
-     * the last 1 day by default. Called before the chart is added to the container;
-     * uses the container's dimensions for zoom so no layout pass is required.
-     */
-    private void setDefaultViewportLastOneDay(BarLineChartBase<?> chart) {
-        if (chart.getData() == null) return;
-        float xMin = chart.getData().getXMin();
-        float xMax = chart.getData().getXMax();
-        float fullRange = xMax - xMin;
-        if (fullRange <= 0f) return;
-        chart.setVisibleXRangeMaximum(fullRange);
-        chart.setVisibleXRangeMinimum(Math.min(3600f, fullRange)); // allow zoom in to 1 hour
-        float oneDay = DEFAULT_VISIBLE_X_RANGE_SECONDS;
-        if (fullRange > oneDay) {
-            int w = chartContainer.getWidth();
-            int h = chartContainer.getHeight();
-            chart.zoom(fullRange / oneDay, 1f, w, h / 2f);
-            chart.moveViewToX(xMax - oneDay);
         }
     }
 
@@ -436,12 +428,13 @@ public class ChartFullScreenFragment extends Fragment {
     // StdMet line chart builder
     // ========================================================================
 
-    private View buildStdMetLineChart(String label, String unit,
+    private View buildStdMetLineChart(long cutoff, String label, String unit,
                                       Function<BuoyStdMetData, Double> extractor) {
         if (allStdMetData == null) return null;
 
         long baseEpoch = Long.MAX_VALUE;
         for (BuoyStdMetData d : allStdMetData) {
+            if (d.getEpochSeconds() < cutoff) continue;
             if (extractor.apply(d) != null && d.getEpochSeconds() < baseEpoch)
                 baseEpoch = d.getEpochSeconds();
         }
@@ -449,6 +442,7 @@ public class ChartFullScreenFragment extends Fragment {
 
         List<Entry> entries = new ArrayList<>();
         for (BuoyStdMetData d : allStdMetData) {
+            if (d.getEpochSeconds() < cutoff) continue;
             Double val = extractor.apply(d);
             if (val != null)
                 entries.add(new Entry((float) (d.getEpochSeconds() - baseEpoch), val.floatValue()));
@@ -463,12 +457,13 @@ public class ChartFullScreenFragment extends Fragment {
     // SpecWave line chart builder
     // ========================================================================
 
-    private View buildSpecWaveLineChart(String label, String unit,
+    private View buildSpecWaveLineChart(long cutoff, String label, String unit,
                                         Function<BuoySpecWaveData, Double> extractor) {
         if (allSpecWaveData == null) return null;
 
         long baseEpoch = Long.MAX_VALUE;
         for (BuoySpecWaveData d : allSpecWaveData) {
+            if (d.getEpochSeconds() < cutoff) continue;
             if (extractor.apply(d) != null && d.getEpochSeconds() < baseEpoch)
                 baseEpoch = d.getEpochSeconds();
         }
@@ -476,6 +471,7 @@ public class ChartFullScreenFragment extends Fragment {
 
         List<Entry> entries = new ArrayList<>();
         for (BuoySpecWaveData d : allSpecWaveData) {
+            if (d.getEpochSeconds() < cutoff) continue;
             Double val = extractor.apply(d);
             if (val != null)
                 entries.add(new Entry((float) (d.getEpochSeconds() - baseEpoch), val.floatValue()));
@@ -490,11 +486,12 @@ public class ChartFullScreenFragment extends Fragment {
     // Wind speed & gust (dual-line) chart builder
     // ========================================================================
 
-    private View buildWindSpeedGustChart(boolean useMetric) {
+    private View buildWindSpeedGustChart(long cutoff, boolean useMetric) {
         if (allStdMetData == null) return null;
 
         long baseEpoch = Long.MAX_VALUE;
         for (BuoyStdMetData d : allStdMetData) {
+            if (d.getEpochSeconds() < cutoff) continue;
             if ((d.getWindSpeed() != null || d.getGustSpeed() != null) && d.getEpochSeconds() < baseEpoch)
                 baseEpoch = d.getEpochSeconds();
         }
@@ -503,6 +500,7 @@ public class ChartFullScreenFragment extends Fragment {
         List<Entry> speedEntries = new ArrayList<>();
         List<Entry> gustEntries = new ArrayList<>();
         for (BuoyStdMetData d : allStdMetData) {
+            if (d.getEpochSeconds() < cutoff) continue;
             long epoch = d.getEpochSeconds();
             if (d.getWindSpeed() != null) {
                 double speed = useMetric ? d.getWindSpeed() : d.getWindSpeed() * MPS_TO_MPH;
@@ -528,11 +526,12 @@ public class ChartFullScreenFragment extends Fragment {
     // Pressure tendency (bar) chart builder
     // ========================================================================
 
-    private View buildPressureTendencyChart(boolean useMetric) {
+    private View buildPressureTendencyChart(long cutoff, boolean useMetric) {
         if (allStdMetData == null) return null;
 
         long baseEpoch = Long.MAX_VALUE;
         for (BuoyStdMetData d : allStdMetData) {
+            if (d.getEpochSeconds() < cutoff) continue;
             if (d.getPressureTendency() != null && d.getEpochSeconds() < baseEpoch)
                 baseEpoch = d.getEpochSeconds();
         }
@@ -540,6 +539,7 @@ public class ChartFullScreenFragment extends Fragment {
 
         List<BarEntry> entries = new ArrayList<>();
         for (BuoyStdMetData d : allStdMetData) {
+            if (d.getEpochSeconds() < cutoff) continue;
             if (d.getPressureTendency() != null) {
                 long epoch = d.getEpochSeconds();
                 double value = useMetric ? d.getPressureTendency()
@@ -598,11 +598,12 @@ public class ChartFullScreenFragment extends Fragment {
     // Steepness (scatter) chart builder
     // ========================================================================
 
-    private View buildSteepnessChart() {
+    private View buildSteepnessChart(long cutoff) {
         if (allSpecWaveData == null) return null;
 
         long baseEpoch = Long.MAX_VALUE;
         for (BuoySpecWaveData d : allSpecWaveData) {
+            if (d.getEpochSeconds() < cutoff) continue;
             if (steepnessToOrdinal(d.getSteepness()) > 0 && d.getEpochSeconds() < baseEpoch)
                 baseEpoch = d.getEpochSeconds();
         }
@@ -614,6 +615,7 @@ public class ChartFullScreenFragment extends Fragment {
         List<Entry> verySteepEntries = new ArrayList<>();
 
         for (BuoySpecWaveData d : allSpecWaveData) {
+            if (d.getEpochSeconds() < cutoff) continue;
             int ordinal = steepnessToOrdinal(d.getSteepness());
             if (ordinal <= 0) continue;
             Entry entry = new Entry((float) (d.getEpochSeconds() - baseEpoch), ordinal);
@@ -914,6 +916,14 @@ public class ChartFullScreenFragment extends Fragment {
         } else if (currentChart instanceof ScatterChart) {
             ((ScatterChart) currentChart).fitScreen();
         }
+    }
+
+    // ========================================================================
+    // Lookback helpers
+    // ========================================================================
+
+    private void updateLookbackLabel(int days) {
+        lookbackValue.setText(getString(R.string.chart_fullscreen_lookback_days, days));
     }
 
     // ========================================================================

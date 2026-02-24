@@ -34,6 +34,7 @@ import com.github.mikephil.charting.formatter.ValueFormatter;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.color.MaterialColors;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
+import com.google.android.material.slider.Slider;
 
 import org.opensurfcast.MainActivity;
 import org.opensurfcast.R;
@@ -77,10 +78,11 @@ public class TideDetailFragment extends Fragment {
 
     private MaterialToolbar toolbar;
     private LinearProgressIndicator loadingProgress;
+    private Slider windowSizeSlider;
+    private TextView windowSizeValue;
+    private Slider centerDateSlider;
+    private TextView centerDateValue;
     private FrameLayout chartContainer;
-
-    /** Default visible X range in seconds (2 days). */
-    private static final float DEFAULT_VISIBLE_X_RANGE_SECONDS = 2 * 86400f;
 
     // -- Dependencies & state ----------------------------------------------------
 
@@ -152,7 +154,31 @@ public class TideDetailFragment extends Fragment {
         });
 
         loadingProgress = view.findViewById(R.id.loading_progress);
+        windowSizeSlider = view.findViewById(R.id.window_size_slider);
+        windowSizeValue = view.findViewById(R.id.window_size_value);
+        centerDateSlider = view.findViewById(R.id.center_date_slider);
+        centerDateValue = view.findViewById(R.id.center_date_value);
         chartContainer = view.findViewById(R.id.chart_container);
+
+        // Initialize the labels
+        updateWindowSizeLabel((int) windowSizeSlider.getValue());
+        updateCenterDateLabel((int) centerDateSlider.getValue());
+
+        windowSizeSlider.addOnChangeListener((slider, value, fromUser) -> {
+            int days = (int) value;
+            updateWindowSizeLabel(days);
+            if (fromUser) {
+                rebuildChart();
+            }
+        });
+
+        centerDateSlider.addOnChangeListener((slider, value, fromUser) -> {
+            int days = (int) value;
+            updateCenterDateLabel(days);
+            if (fromUser) {
+                rebuildChart();
+            }
+        });
 
         stationId = requireArguments().getString(ARG_STATION_ID);
 
@@ -179,6 +205,8 @@ public class TideDetailFragment extends Fragment {
         immersiveMode = true;
 
         ((View) toolbar.getParent()).setVisibility(View.GONE);
+        view.findViewById(R.id.window_size_row).setVisibility(View.GONE);
+        view.findViewById(R.id.center_date_row).setVisibility(View.GONE);
         loadingProgress.setVisibility(View.GONE);
 
         ((MainActivity) requireActivity()).setBottomNavigationVisible(false);
@@ -235,12 +263,13 @@ public class TideDetailFragment extends Fragment {
     // ========================================================================
 
     /**
-     * Rebuilds the chart using the full in-memory predictions. Default visible
-     * range is 2 days centered on now; user can pan and zoom to the full range.
+     * Rebuilds the chart using the current time range slider value and the
+     * full in-memory predictions list. Called on initial load and on slider change.
      */
     private void rebuildChart() {
         if (chartContainer == null || allPredictions == null) return;
 
+        // Remove previous chart
         if (currentChart != null) {
             chartContainer.removeView(currentChart);
             currentChart = null;
@@ -252,30 +281,37 @@ public class TideDetailFragment extends Fragment {
         }
 
         boolean useMetric = userPreferences.isMetric();
+        int windowSizeDays = (int) windowSizeSlider.getValue();
+        int centerDaysOffset = (int) centerDateSlider.getValue();
 
-        long startEpochSeconds = Long.MAX_VALUE;
-        long endEpochSeconds = Long.MIN_VALUE;
-        for (TidePrediction pred : allPredictions) {
-            if (pred.epochSeconds < startEpochSeconds) startEpochSeconds = pred.epochSeconds;
-            if (pred.epochSeconds > endEpochSeconds) endEpochSeconds = pred.epochSeconds;
-        }
+        // Calculate time window centered on the specified date
+        long nowEpochSeconds = System.currentTimeMillis() / 1000L;
+        long centerEpochSeconds = nowEpochSeconds + (long) centerDaysOffset * 86400L;
+        long halfWindowSeconds = (long) (windowSizeDays / 2.0 * 86400L);
+
+        long startEpochSeconds = centerEpochSeconds - halfWindowSeconds;
+        long endEpochSeconds = centerEpochSeconds + halfWindowSeconds;
         long baseEpoch = startEpochSeconds;
 
+        // Generate interpolated samples (X = seconds since baseEpoch for float precision)
         List<Entry> interpolatedEntries = generateInterpolatedSamples(
                 startEpochSeconds, endEpochSeconds, baseEpoch, useMetric);
 
+        // Collect tide shift markers within the time window
         List<Entry> highTideEntries = new ArrayList<>();
         List<Entry> lowTideEntries = new ArrayList<>();
 
         for (TidePrediction pred : allPredictions) {
-            float x = (float) (pred.epochSeconds - baseEpoch);
-            double displayValue = useMetric ? pred.value : pred.value * METERS_TO_FEET;
-            Entry entry = new Entry(x, (float) displayValue);
+            if (pred.epochSeconds >= startEpochSeconds && pred.epochSeconds <= endEpochSeconds) {
+                float x = (float) (pred.epochSeconds - baseEpoch);
+                double displayValue = useMetric ? pred.value : pred.value * METERS_TO_FEET;
+                Entry entry = new Entry(x, (float) displayValue);
 
-            if (pred.isHighTide()) {
-                highTideEntries.add(entry);
-            } else {
-                lowTideEntries.add(entry);
+                if (pred.isHighTide()) {
+                    highTideEntries.add(entry);
+                } else {
+                    lowTideEntries.add(entry);
+                }
             }
         }
 
@@ -288,9 +324,6 @@ public class TideDetailFragment extends Fragment {
 
         if (chart != null) {
             currentChart = chart;
-            if (chart instanceof CombinedChart) {
-                setDefaultViewport((CombinedChart) chart, baseEpoch);
-            }
             chartContainer.addView(chart);
         }
     }
@@ -417,7 +450,7 @@ public class TideDetailFragment extends Fragment {
 
     private LineDataSet createLineDataSet(List<Entry> entries, String label) {
         int lineColor = resolveColor(com.google.android.material.R.attr.colorPrimary);
-        
+
         LineDataSet dataSet = new LineDataSet(entries, label);
         dataSet.setColor(lineColor);
         dataSet.setLineWidth(2f);
@@ -569,29 +602,33 @@ public class TideDetailFragment extends Fragment {
     }
 
     // ========================================================================
-    // Default viewport
+    // Slider helpers
     // ========================================================================
 
-    /**
-     * Zooms the chart to show a 2-day window centered on now, allowing
-     * pan/zoom across the full data range.
-     */
-    private void setDefaultViewport(CombinedChart chart, long baseEpochSeconds) {
-        if (chart.getData() == null) return;
-        float xMin = chart.getData().getXMin();
-        float xMax = chart.getData().getXMax();
-        float fullRange = xMax - xMin;
-        if (fullRange <= 0f) return;
-        chart.setVisibleXRangeMaximum(fullRange);
-        chart.setVisibleXRangeMinimum(Math.min(3600f, fullRange));
-        float twoDays = DEFAULT_VISIBLE_X_RANGE_SECONDS;
-        if (fullRange > twoDays) {
-            int w = chartContainer.getWidth();
-            int h = chartContainer.getHeight();
-            chart.zoom(fullRange / twoDays, 1f, w, h / 2f);
-            long nowEpochSeconds = System.currentTimeMillis() / 1000L;
-            float nowOffset = nowEpochSeconds - baseEpochSeconds;
-            chart.moveViewToX(nowOffset - twoDays / 2f);
+    private void updateWindowSizeLabel(int days) {
+        if (days == 1) {
+            windowSizeValue.setText(getString(R.string.tide_detail_window_day));
+        } else {
+            windowSizeValue.setText(getString(R.string.tide_detail_window_days, days));
+        }
+    }
+
+    private void updateCenterDateLabel(int days) {
+        if (days == 0) {
+            centerDateValue.setText(getString(R.string.tide_detail_time_now));
+        } else if (days < 0) {
+            int absDays = Math.abs(days);
+            if (absDays == 1) {
+                centerDateValue.setText(getString(R.string.tide_detail_time_day_ago));
+            } else {
+                centerDateValue.setText(getString(R.string.tide_detail_time_days_ago, absDays));
+            }
+        } else {
+            if (days == 1) {
+                centerDateValue.setText(getString(R.string.tide_detail_time_day_ahead));
+            } else {
+                centerDateValue.setText(getString(R.string.tide_detail_time_days_ahead, days));
+            }
         }
     }
 

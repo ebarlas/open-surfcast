@@ -31,7 +31,9 @@
     <string name="no_data_available">No data available for this station</string>
 
     <!-- Chart full-screen -->
-    <string name="chart_fullscreen_reset_zoom">Show all data</string>
+    <string name="chart_fullscreen_lookback_label">Look Back</string>
+    <string name="chart_fullscreen_lookback_days">%d days</string>
+    <string name="chart_fullscreen_reset_zoom">Reset Zoom</string>
 
     <!-- Tide list -->
     <string name="tide_list_title">Tides</string>
@@ -53,6 +55,15 @@
 
     <!-- Tide detail -->
     <string name="tide_detail_title">Water Level</string>
+    <string name="tide_detail_window_size_label">Window</string>
+    <string name="tide_detail_center_date_label">Center</string>
+    <string name="tide_detail_window_days">%d days</string>
+    <string name="tide_detail_window_day">1 day</string>
+    <string name="tide_detail_time_now">Now</string>
+    <string name="tide_detail_time_days_ago">%d days ago</string>
+    <string name="tide_detail_time_days_ahead">%d days ahead</string>
+    <string name="tide_detail_time_day_ago">1 day ago</string>
+    <string name="tide_detail_time_day_ahead">1 day ahead</string>
 
     <!-- Current list -->
     <string name="current_list_title">Currents</string>
@@ -73,6 +84,15 @@
 
     <!-- Current detail -->
     <string name="current_detail_title">Current Velocity</string>
+    <string name="current_detail_window_size_label">Window</string>
+    <string name="current_detail_center_date_label">Center</string>
+    <string name="current_detail_window_days">%d days</string>
+    <string name="current_detail_window_day">1 day</string>
+    <string name="current_detail_time_now">Now</string>
+    <string name="current_detail_time_days_ago">%d days ago</string>
+    <string name="current_detail_time_days_ahead">%d days ahead</string>
+    <string name="current_detail_time_day_ago">1 day ago</string>
+    <string name="current_detail_time_day_ahead">1 day ahead</string>
 
     <!-- Bottom navigation -->
     <string name="nav_buoys">Buoys</string>
