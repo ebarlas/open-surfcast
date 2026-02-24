@@ -41,7 +41,6 @@ import org.opensurfcast.MainActivity;
 import org.opensurfcast.R;
 import org.opensurfcast.buoy.BuoySpecWaveData;
 import org.opensurfcast.buoy.BuoyStation;
-import org.opensurfcast.buoy.HasEpochSeconds;
 import org.opensurfcast.buoy.BuoyStdMetData;
 import org.opensurfcast.db.BuoySpecWaveDataDb;
 import org.opensurfcast.db.BuoyStationDb;
@@ -66,8 +65,8 @@ import java.util.function.Function;
 public class BuoyDetailFragment extends Fragment {
 
     private static final String ARG_STATION_ID = "station_id";
-    /** Lookback window in seconds for plots and visualizations (1 day). */
-    private static final long LOOKBACK_SECONDS = 86400L;
+    /** Default visible X range in seconds (2 days). */
+    private static final float DEFAULT_VISIBLE_X_RANGE_SECONDS = 2 * 86400f;
 
     private static final double METERS_TO_FEET = 3.28084;
     private static final double FEET_TO_METERS = 0.3048;
@@ -144,10 +143,6 @@ public class BuoyDetailFragment extends Fragment {
             List<BuoyStdMetData> stdMetList = buoyStdMetDataDb.queryByStation(stationId);
             List<BuoySpecWaveData> specWaveList = buoySpecWaveDataDb.queryByStation(stationId);
 
-            long cutoff = System.currentTimeMillis() / 1000L - LOOKBACK_SECONDS;
-            final List<BuoyStdMetData> filteredStdMet = filterByLookback(stdMetList, cutoff);
-            final List<BuoySpecWaveData> filteredSpecWave = filterByLookback(specWaveList, cutoff);
-
             if (isAdded()) {
                 requireActivity().runOnUiThread(() -> {
                     loadingProgress.setVisibility(View.GONE);
@@ -159,29 +154,15 @@ public class BuoyDetailFragment extends Fragment {
                     }
 
                     boolean useMetric = userPreferences.isMetric();
-                    buildStdMetSection(filteredStdMet, useMetric);
-                    buildSpecWaveSection(filteredSpecWave, useMetric);
+                    buildStdMetSection(stdMetList, useMetric);
+                    buildSpecWaveSection(specWaveList, useMetric);
 
-                    // Show empty state if both lists are empty
-                    if (filteredStdMet.isEmpty() && filteredSpecWave.isEmpty()) {
+                    if (stdMetList.isEmpty() && specWaveList.isEmpty()) {
                         addEmptyState();
                     }
                 });
             }
         });
-    }
-
-    /**
-     * Filters data to only include entries within the lookback window.
-     *
-     * @param dataList list of items with epoch timestamps
-     * @param cutoff   minimum epoch seconds (inclusive)
-     * @return filtered list containing only items with epochSeconds >= cutoff
-     */
-    private <T extends HasEpochSeconds> List<T> filterByLookback(List<T> dataList, long cutoff) {
-        return dataList.stream()
-                .filter(d -> d.getEpochSeconds() >= cutoff)
-                .collect(java.util.stream.Collectors.toList());
     }
 
     // ========================================================================
@@ -385,6 +366,7 @@ public class BuoyDetailFragment extends Fragment {
 
         configureXAxis(chart);
         configureYAxis(chart);
+        setDefaultViewport(chart);
         chart.invalidate();
 
         cardContent.addView(chart);
@@ -446,6 +428,7 @@ public class BuoyDetailFragment extends Fragment {
 
         configureXAxis(chart);
         configureYAxis(chart);
+        setDefaultViewport(chart);
         chart.invalidate();
 
         cardContent.addView(chart);
@@ -617,8 +600,9 @@ public class BuoyDetailFragment extends Fragment {
         chart.getDescription().setEnabled(false);
         chart.setTouchEnabled(true);
         chart.setDragEnabled(true);
-        chart.setScaleEnabled(false);
-        chart.setPinchZoom(false);
+        chart.setScaleEnabled(true);
+        chart.setScaleYEnabled(false);
+        chart.setPinchZoom(true);
         chart.setDrawGridBackground(false);
         chart.setBackgroundColor(Color.TRANSPARENT);
         chart.setExtraBottomOffset(4f);
@@ -670,6 +654,7 @@ public class BuoyDetailFragment extends Fragment {
         });
 
         chart.getAxisRight().setEnabled(false);
+        setDefaultViewport(chart);
         chart.invalidate();
 
         cardContent.addView(chart);
@@ -751,6 +736,7 @@ public class BuoyDetailFragment extends Fragment {
         chart.setData(lineData);
         configureXAxis(chart);
         configureYAxis(chart);
+        setDefaultViewport(chart);
         chart.invalidate();
 
         cardContent.addView(chart);
@@ -905,8 +891,9 @@ public class BuoyDetailFragment extends Fragment {
         chart.getLegend().setEnabled(false);
         chart.setTouchEnabled(true);
         chart.setDragEnabled(true);
-        chart.setScaleEnabled(false);
-        chart.setPinchZoom(false);
+        chart.setScaleEnabled(true);
+        chart.setScaleYEnabled(false);
+        chart.setPinchZoom(true);
         chart.setDrawGridBackground(false);
         chart.setBackgroundColor(Color.TRANSPARENT);
         chart.setExtraBottomOffset(4f);
@@ -924,8 +911,9 @@ public class BuoyDetailFragment extends Fragment {
         chart.getLegend().setEnabled(false);
         chart.setTouchEnabled(true);
         chart.setDragEnabled(true);
-        chart.setScaleEnabled(false);
-        chart.setPinchZoom(false);
+        chart.setScaleEnabled(true);
+        chart.setScaleYEnabled(false);
+        chart.setPinchZoom(true);
         chart.setDrawGridBackground(false);
         chart.setBackgroundColor(Color.TRANSPARENT);
         chart.setExtraBottomOffset(4f);
@@ -1005,6 +993,33 @@ public class BuoyDetailFragment extends Fragment {
         leftAxis.setLabelCount(5, false);
 
         chart.getAxisRight().setEnabled(false);
+    }
+
+    // ========================================================================
+    // Default viewport
+    // ========================================================================
+
+    /**
+     * Zooms the chart to show the last 2 days by default, allowing pan/zoom
+     * across the full data range. Uses the metricContainer width for the zoom
+     * calculation (the container is already laid out by this point).
+     */
+    private void setDefaultViewport(BarLineChartBase<?> chart) {
+        if (chart.getData() == null) return;
+        float xMin = chart.getData().getXMin();
+        float xMax = chart.getData().getXMax();
+        float fullRange = xMax - xMin;
+        if (fullRange <= 0f) return;
+        chart.setVisibleXRangeMaximum(fullRange);
+        chart.setVisibleXRangeMinimum(Math.min(3600f, fullRange));
+        if (fullRange > DEFAULT_VISIBLE_X_RANGE_SECONDS) {
+            int w = metricContainer.getWidth();
+            int h = dpToPx(180);
+            if (w > 0) {
+                chart.zoom(fullRange / DEFAULT_VISIBLE_X_RANGE_SECONDS, 1f, w, h / 2f);
+                chart.moveViewToX(xMax - DEFAULT_VISIBLE_X_RANGE_SECONDS);
+            }
+        }
     }
 
     // ========================================================================

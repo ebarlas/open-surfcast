@@ -33,7 +33,6 @@ import com.github.mikephil.charting.formatter.ValueFormatter;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.color.MaterialColors;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
-import com.google.android.material.slider.Slider;
 
 import org.opensurfcast.MainActivity;
 import org.opensurfcast.R;
@@ -77,11 +76,10 @@ public class CurrentDetailFragment extends Fragment {
 
     private MaterialToolbar toolbar;
     private LinearProgressIndicator loadingProgress;
-    private Slider windowSizeSlider;
-    private TextView windowSizeValue;
-    private Slider centerDateSlider;
-    private TextView centerDateValue;
     private FrameLayout chartContainer;
+
+    /** Default visible X range in seconds (2 days). */
+    private static final float DEFAULT_VISIBLE_X_RANGE_SECONDS = 2 * 86400f;
 
     // -- Dependencies & state ----------------------------------------------------
 
@@ -153,31 +151,7 @@ public class CurrentDetailFragment extends Fragment {
         });
 
         loadingProgress = view.findViewById(R.id.loading_progress);
-        windowSizeSlider = view.findViewById(R.id.window_size_slider);
-        windowSizeValue = view.findViewById(R.id.window_size_value);
-        centerDateSlider = view.findViewById(R.id.center_date_slider);
-        centerDateValue = view.findViewById(R.id.center_date_value);
         chartContainer = view.findViewById(R.id.chart_container);
-
-        // Initialize the labels
-        updateWindowSizeLabel((int) windowSizeSlider.getValue());
-        updateCenterDateLabel((int) centerDateSlider.getValue());
-
-        windowSizeSlider.addOnChangeListener((slider, value, fromUser) -> {
-            int days = (int) value;
-            updateWindowSizeLabel(days);
-            if (fromUser) {
-                rebuildChart();
-            }
-        });
-
-        centerDateSlider.addOnChangeListener((slider, value, fromUser) -> {
-            int days = (int) value;
-            updateCenterDateLabel(days);
-            if (fromUser) {
-                rebuildChart();
-            }
-        });
 
         stationId = requireArguments().getString(ARG_STATION_ID);
 
@@ -204,8 +178,6 @@ public class CurrentDetailFragment extends Fragment {
         immersiveMode = true;
 
         ((View) toolbar.getParent()).setVisibility(View.GONE);
-        view.findViewById(R.id.window_size_row).setVisibility(View.GONE);
-        view.findViewById(R.id.center_date_row).setVisibility(View.GONE);
         loadingProgress.setVisibility(View.GONE);
 
         ((MainActivity) requireActivity()).setBottomNavigationVisible(false);
@@ -262,13 +234,12 @@ public class CurrentDetailFragment extends Fragment {
     // ========================================================================
 
     /**
-     * Rebuilds the chart using the current time range slider value and the
-     * full in-memory predictions list. Called on initial load and on slider change.
+     * Rebuilds the chart using the full in-memory predictions. Default visible
+     * range is 2 days centered on now; user can pan and zoom to the full range.
      */
     private void rebuildChart() {
         if (chartContainer == null || allPredictions == null) return;
 
-        // Remove previous chart
         if (currentChart != null) {
             chartContainer.removeView(currentChart);
             currentChart = null;
@@ -280,42 +251,34 @@ public class CurrentDetailFragment extends Fragment {
         }
 
         boolean useMetric = userPreferences.isMetric();
-        int windowSizeDays = (int) windowSizeSlider.getValue();
-        int centerDaysOffset = (int) centerDateSlider.getValue();
 
-        // Calculate time window centered on the specified date
-        long nowEpochSeconds = System.currentTimeMillis() / 1000L;
-        long centerEpochSeconds = nowEpochSeconds + (long) centerDaysOffset * 86400L;
-        long halfWindowSeconds = (long) (windowSizeDays / 2.0 * 86400L);
-
-        long startEpochSeconds = centerEpochSeconds - halfWindowSeconds;
-        long endEpochSeconds = centerEpochSeconds + halfWindowSeconds;
-
+        long startEpochSeconds = Long.MAX_VALUE;
+        long endEpochSeconds = Long.MIN_VALUE;
+        for (CurrentPrediction pred : allPredictions) {
+            if (pred.epochSeconds < startEpochSeconds) startEpochSeconds = pred.epochSeconds;
+            if (pred.epochSeconds > endEpochSeconds) endEpochSeconds = pred.epochSeconds;
+        }
         long baseEpoch = startEpochSeconds;
-        // Generate interpolated samples (X = seconds since baseEpoch for float precision)
+
         List<Entry> interpolatedEntries = generateInterpolatedSamples(
                 startEpochSeconds, endEpochSeconds, baseEpoch, useMetric);
 
-        // Collect max-flood, max-ebb, and slack markers within the time window
         List<Entry> floodEntries = new ArrayList<>();
         List<Entry> ebbEntries = new ArrayList<>();
         List<Entry> slackEntries = new ArrayList<>();
 
         for (CurrentPrediction pred : allPredictions) {
-            if (pred.epochSeconds >= startEpochSeconds && pred.epochSeconds <= endEpochSeconds) {
-                float x = (float) (pred.epochSeconds - baseEpoch);
-                if (pred.isFlood()) {
-                    double displayValue = useMetric ? pred.velocityMajor
-                            : pred.velocityMajor * CM_PER_SEC_TO_KNOTS;
-                    floodEntries.add(new Entry(x, (float) displayValue));
-                } else if (pred.isEbb()) {
-                    double displayValue = useMetric ? pred.velocityMajor
-                            : pred.velocityMajor * CM_PER_SEC_TO_KNOTS;
-                    ebbEntries.add(new Entry(x, (float) displayValue));
-                } else if (pred.isSlack()) {
-                    // Curve now passes through zero exactly at slack time
-                    slackEntries.add(new Entry(x, 0f));
-                }
+            float x = (float) (pred.epochSeconds - baseEpoch);
+            if (pred.isFlood()) {
+                double displayValue = useMetric ? pred.velocityMajor
+                        : pred.velocityMajor * CM_PER_SEC_TO_KNOTS;
+                floodEntries.add(new Entry(x, (float) displayValue));
+            } else if (pred.isEbb()) {
+                double displayValue = useMetric ? pred.velocityMajor
+                        : pred.velocityMajor * CM_PER_SEC_TO_KNOTS;
+                ebbEntries.add(new Entry(x, (float) displayValue));
+            } else if (pred.isSlack()) {
+                slackEntries.add(new Entry(x, 0f));
             }
         }
 
@@ -330,6 +293,9 @@ public class CurrentDetailFragment extends Fragment {
 
         if (chart != null) {
             currentChart = chart;
+            if (chart instanceof CombinedChart) {
+                setDefaultViewport((CombinedChart) chart, baseEpoch);
+            }
             chartContainer.addView(chart);
         }
     }
@@ -620,33 +586,29 @@ public class CurrentDetailFragment extends Fragment {
     }
 
     // ========================================================================
-    // Slider helpers
+    // Default viewport
     // ========================================================================
 
-    private void updateWindowSizeLabel(int days) {
-        if (days == 1) {
-            windowSizeValue.setText(getString(R.string.current_detail_window_day));
-        } else {
-            windowSizeValue.setText(getString(R.string.current_detail_window_days, days));
-        }
-    }
-
-    private void updateCenterDateLabel(int days) {
-        if (days == 0) {
-            centerDateValue.setText(getString(R.string.current_detail_time_now));
-        } else if (days < 0) {
-            int absDays = Math.abs(days);
-            if (absDays == 1) {
-                centerDateValue.setText(getString(R.string.current_detail_time_day_ago));
-            } else {
-                centerDateValue.setText(getString(R.string.current_detail_time_days_ago, absDays));
-            }
-        } else {
-            if (days == 1) {
-                centerDateValue.setText(getString(R.string.current_detail_time_day_ahead));
-            } else {
-                centerDateValue.setText(getString(R.string.current_detail_time_days_ahead, days));
-            }
+    /**
+     * Zooms the chart to show a 2-day window centered on now, allowing
+     * pan/zoom across the full data range.
+     */
+    private void setDefaultViewport(CombinedChart chart, long baseEpochSeconds) {
+        if (chart.getData() == null) return;
+        float xMin = chart.getData().getXMin();
+        float xMax = chart.getData().getXMax();
+        float fullRange = xMax - xMin;
+        if (fullRange <= 0f) return;
+        chart.setVisibleXRangeMaximum(fullRange);
+        chart.setVisibleXRangeMinimum(Math.min(3600f, fullRange));
+        float twoDays = DEFAULT_VISIBLE_X_RANGE_SECONDS;
+        if (fullRange > twoDays) {
+            int w = chartContainer.getWidth();
+            int h = chartContainer.getHeight();
+            chart.zoom(fullRange / twoDays, 1f, w, h / 2f);
+            long nowEpochSeconds = System.currentTimeMillis() / 1000L;
+            float nowOffset = nowEpochSeconds - baseEpochSeconds;
+            chart.moveViewToX(nowOffset - twoDays / 2f);
         }
     }
 
