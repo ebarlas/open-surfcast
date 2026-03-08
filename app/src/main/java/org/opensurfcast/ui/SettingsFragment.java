@@ -46,6 +46,8 @@ public class SettingsFragment extends Fragment {
     private MaterialButtonToggleGroup sortToggleGroup;
     private MaterialSwitch chartLabelsSwitch;
     private TextView chartLabelsSummary;
+    private MaterialSwitch hourlyIntervalSwitch;
+    private TextView hourlyIntervalSummary;
     private MaterialSwitch metricSwitch;
     private TextView metricSummary;
     private AutoCompleteTextView homeStationInput;
@@ -132,6 +134,22 @@ public class SettingsFragment extends Fragment {
 
         chartLabelsRow.setOnClickListener(v -> chartLabelsSwitch.toggle());
 
+        // --- Hourly interval toggle ---
+        hourlyIntervalSwitch = view.findViewById(R.id.switch_use_hourly_interval);
+        hourlyIntervalSummary = view.findViewById(R.id.hourly_interval_summary);
+        LinearLayout hourlyIntervalRow = view.findViewById(R.id.setting_use_hourly_interval);
+
+        boolean useHourly = userPreferences.isHourlyInterval();
+        hourlyIntervalSwitch.setChecked(useHourly);
+        updateHourlyIntervalSummary(useHourly);
+
+        hourlyIntervalSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            userPreferences.setHourlyInterval(isChecked);
+            updateHourlyIntervalSummary(isChecked);
+        });
+
+        hourlyIntervalRow.setOnClickListener(v -> hourlyIntervalSwitch.toggle());
+
         // --- Metric units toggle ---
         metricSwitch = view.findViewById(R.id.switch_use_metric);
         metricSummary = view.findViewById(R.id.metric_summary);
@@ -192,6 +210,12 @@ public class SettingsFragment extends Fragment {
         chartLabelsSummary.setText(showLabels
                 ? R.string.settings_show_chart_labels_summary_on
                 : R.string.settings_show_chart_labels_summary_off);
+    }
+
+    private void updateHourlyIntervalSummary(boolean useHourly) {
+        hourlyIntervalSummary.setText(useHourly
+                ? R.string.settings_hourly_interval_summary_on
+                : R.string.settings_hourly_interval_summary_off);
     }
 
     private void updateMetricSummary(boolean isMetric) {

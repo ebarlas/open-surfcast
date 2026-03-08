@@ -37,6 +37,7 @@ import com.google.android.material.progressindicator.LinearProgressIndicator;
 
 import org.opensurfcast.MainActivity;
 import org.opensurfcast.R;
+import org.opensurfcast.buoy.BuoyDataHourlyAverager;
 import org.opensurfcast.buoy.BuoySpecWaveData;
 import org.opensurfcast.buoy.BuoyStation;
 import org.opensurfcast.buoy.HasEpochSeconds;
@@ -143,8 +144,16 @@ public class BuoyDetailFragment extends Fragment {
             List<BuoySpecWaveData> specWaveList = buoySpecWaveDataDb.queryByStation(stationId);
 
             long cutoff = System.currentTimeMillis() / 1000L - LOOKBACK_SECONDS;
-            final List<BuoyStdMetData> filteredStdMet = filterByLookback(stdMetList, cutoff);
-            final List<BuoySpecWaveData> filteredSpecWave = filterByLookback(specWaveList, cutoff);
+            List<BuoyStdMetData> filteredStdMet = filterByLookback(stdMetList, cutoff);
+            List<BuoySpecWaveData> filteredSpecWave = filterByLookback(specWaveList, cutoff);
+
+            if (userPreferences.isHourlyInterval()) {
+                filteredStdMet = BuoyDataHourlyAverager.averageStdMetByHour(filteredStdMet);
+                filteredSpecWave = BuoyDataHourlyAverager.averageSpecWaveByHour(filteredSpecWave);
+            }
+
+            final List<BuoyStdMetData> stdMetResult = filteredStdMet;
+            final List<BuoySpecWaveData> specWaveResult = filteredSpecWave;
 
             if (isAdded()) {
                 requireActivity().runOnUiThread(() -> {
@@ -157,11 +166,11 @@ public class BuoyDetailFragment extends Fragment {
                     }
 
                     boolean useMetric = userPreferences.isMetric();
-                    buildStdMetSection(filteredStdMet, useMetric);
-                    buildSpecWaveSection(filteredSpecWave, useMetric);
+                    buildStdMetSection(stdMetResult, useMetric);
+                    buildSpecWaveSection(specWaveResult, useMetric);
 
                     // Show empty state if both lists are empty
-                    if (filteredStdMet.isEmpty() && filteredSpecWave.isEmpty()) {
+                    if (stdMetResult.isEmpty() && specWaveResult.isEmpty()) {
                         addEmptyState();
                     }
                 });
@@ -296,13 +305,20 @@ public class BuoyDetailFragment extends Fragment {
                                     Function<BuoyStdMetData, Double> valueExtractor,
                                     Function<BuoyStdMetData, Long> epochExtractor,
                                     int colorIndex, String metricKey) {
+        long baseEpoch = Long.MAX_VALUE;
+        for (BuoyStdMetData d : dataList) {
+            if (valueExtractor.apply(d) != null && epochExtractor.apply(d) < baseEpoch)
+                baseEpoch = epochExtractor.apply(d);
+        }
+        if (baseEpoch == Long.MAX_VALUE) return;
+
         List<Entry> entries = new ArrayList<>();
         Double latestValue = null;
 
         for (BuoyStdMetData d : dataList) {
             Double val = valueExtractor.apply(d);
             if (val != null) {
-                entries.add(new Entry(epochExtractor.apply(d), val.floatValue()));
+                entries.add(new Entry((float) (epochExtractor.apply(d) - baseEpoch), val.floatValue()));
                 latestValue = val;
             }
         }
@@ -310,28 +326,35 @@ public class BuoyDetailFragment extends Fragment {
         if (entries.isEmpty()) return;
 
         int color = getChartColor(colorIndex);
-        addLineChartTile(title, unit, latestValue, entries, color, null, null, metricKey);
+        addLineChartTile(title, unit, latestValue, entries, color, null, null, metricKey, baseEpoch);
     }
 
     /**
      * Creates a dual-line chart for wind speed and gust speed.
      */
     private void addWindSpeedGustChart(List<BuoyStdMetData> dataList, boolean useMetric) {
+        long baseEpoch = Long.MAX_VALUE;
+        for (BuoyStdMetData d : dataList) {
+            if ((d.getWindSpeed() != null || d.getGustSpeed() != null) && d.getEpochSeconds() < baseEpoch)
+                baseEpoch = d.getEpochSeconds();
+        }
+        if (baseEpoch == Long.MAX_VALUE) return;
+
         List<Entry> speedEntries = new ArrayList<>();
         List<Entry> gustEntries = new ArrayList<>();
         Double latestSpeed = null;
         Double latestGust = null;
 
         for (BuoyStdMetData d : dataList) {
-            float epoch = d.getEpochSeconds();
+            float x = (float) (d.getEpochSeconds() - baseEpoch);
             if (d.getWindSpeed() != null) {
                 double speed = useMetric ? d.getWindSpeed() : d.getWindSpeed() * MPS_TO_MPH;
-                speedEntries.add(new Entry(epoch, (float) speed));
+                speedEntries.add(new Entry(x, (float) speed));
                 latestSpeed = speed;
             }
             if (d.getGustSpeed() != null) {
                 double gust = useMetric ? d.getGustSpeed() : d.getGustSpeed() * MPS_TO_MPH;
-                gustEntries.add(new Entry(epoch, (float) gust));
+                gustEntries.add(new Entry(x, (float) gust));
                 latestGust = gust;
             }
         }
@@ -342,7 +365,6 @@ public class BuoyDetailFragment extends Fragment {
         int primaryColor = resolveColor(com.google.android.material.R.attr.colorPrimary);
         int secondaryColor = resolveColor(com.google.android.material.R.attr.colorTertiary);
 
-        // Build latest value string
         StringBuilder latestStr = new StringBuilder();
         if (latestSpeed != null) {
             latestStr.append(formatValue(latestSpeed));
@@ -375,15 +397,14 @@ public class BuoyDetailFragment extends Fragment {
 
         chart.setData(lineData);
 
-        // Show legend for multi-dataset chart
         Legend legend = chart.getLegend();
         legend.setEnabled(true);
         legend.setTextColor(resolveColor(com.google.android.material.R.attr.colorOnSurface));
         legend.setTextSize(11f);
 
-        configureXAxis(chart);
+        configureXAxis(chart, baseEpoch);
         configureYAxis(chart);
-        attachMarker(chart, createValueMarker(windUnit, 0));
+        attachMarker(chart, createValueMarker(windUnit, baseEpoch));
         chart.invalidate();
 
         cardContent.addView(chart);
@@ -396,6 +417,13 @@ public class BuoyDetailFragment extends Fragment {
      * Creates a BarChart tile for pressure tendency.
      */
     private void addPressureTendencyChart(List<BuoyStdMetData> dataList, boolean useMetric) {
+        long baseEpoch = Long.MAX_VALUE;
+        for (BuoyStdMetData d : dataList) {
+            if (d.getPressureTendency() != null && d.getEpochSeconds() < baseEpoch)
+                baseEpoch = d.getEpochSeconds();
+        }
+        if (baseEpoch == Long.MAX_VALUE) return;
+
         List<BarEntry> entries = new ArrayList<>();
         Double latestValue = null;
 
@@ -403,7 +431,7 @@ public class BuoyDetailFragment extends Fragment {
             if (d.getPressureTendency() != null) {
                 double value = useMetric ? d.getPressureTendency()
                         : d.getPressureTendency() * HPA_TO_INHG;
-                entries.add(new BarEntry(d.getEpochSeconds(), (float) value));
+                entries.add(new BarEntry((float) (d.getEpochSeconds() - baseEpoch), (float) value));
                 latestValue = value;
             }
         }
@@ -421,7 +449,6 @@ public class BuoyDetailFragment extends Fragment {
 
         BarChart chart = createBarChart();
 
-        // Color positive/negative bars differently
         List<Integer> colors = new ArrayList<>();
         for (BarEntry entry : entries) {
             colors.add(entry.getY() >= 0 ? primaryColor : tertiaryColor);
@@ -433,9 +460,6 @@ public class BuoyDetailFragment extends Fragment {
 
         BarData barData = new BarData(dataSet);
 
-        // Calculate bar width from actual data spacing. Default width (0.85)
-        // is designed for index-based X values and produces invisible bars
-        // when X values are epoch seconds in the billions.
         if (entries.size() >= 2) {
             float spacing = entries.get(1).getX() - entries.get(0).getX();
             barData.setBarWidth(spacing * 0.9f);
@@ -443,9 +467,9 @@ public class BuoyDetailFragment extends Fragment {
 
         chart.setData(barData);
 
-        configureXAxis(chart);
+        configureXAxis(chart, baseEpoch);
         configureYAxis(chart);
-        attachMarker(chart, createSignedValueMarker(pressureUnit, 0));
+        attachMarker(chart, createSignedValueMarker(pressureUnit, baseEpoch));
         chart.invalidate();
 
         cardContent.addView(chart);
@@ -524,13 +548,20 @@ public class BuoyDetailFragment extends Fragment {
                                       Function<BuoySpecWaveData, Double> valueExtractor,
                                       Function<BuoySpecWaveData, Long> epochExtractor,
                                       int colorIndex, String metricKey) {
+        long baseEpoch = Long.MAX_VALUE;
+        for (BuoySpecWaveData d : dataList) {
+            if (valueExtractor.apply(d) != null && epochExtractor.apply(d) < baseEpoch)
+                baseEpoch = epochExtractor.apply(d);
+        }
+        if (baseEpoch == Long.MAX_VALUE) return;
+
         List<Entry> entries = new ArrayList<>();
         Double latestValue = null;
 
         for (BuoySpecWaveData d : dataList) {
             Double val = valueExtractor.apply(d);
             if (val != null) {
-                entries.add(new Entry(epochExtractor.apply(d), val.floatValue()));
+                entries.add(new Entry((float) (epochExtractor.apply(d) - baseEpoch), val.floatValue()));
                 latestValue = val;
             }
         }
@@ -538,7 +569,7 @@ public class BuoyDetailFragment extends Fragment {
         if (entries.isEmpty()) return;
 
         int color = getChartColor(colorIndex);
-        addLineChartTile(title, unit, latestValue, entries, color, null, null, metricKey);
+        addLineChartTile(title, unit, latestValue, entries, color, null, null, metricKey, baseEpoch);
     }
 
     /**
@@ -575,7 +606,13 @@ public class BuoyDetailFragment extends Fragment {
      * with category names on the Y-axis.
      */
     private void addSteepnessChart(List<BuoySpecWaveData> dataList) {
-        // Bin entries by category
+        long baseEpoch = Long.MAX_VALUE;
+        for (BuoySpecWaveData d : dataList) {
+            if (steepnessToOrdinal(d.getSteepness()) > 0 && d.getEpochSeconds() < baseEpoch)
+                baseEpoch = d.getEpochSeconds();
+        }
+        if (baseEpoch == Long.MAX_VALUE) return;
+
         List<Entry> swellEntries = new ArrayList<>();
         List<Entry> averageEntries = new ArrayList<>();
         List<Entry> steepEntries = new ArrayList<>();
@@ -585,7 +622,7 @@ public class BuoyDetailFragment extends Fragment {
         for (BuoySpecWaveData d : dataList) {
             int ordinal = steepnessToOrdinal(d.getSteepness());
             if (ordinal <= 0) continue;
-            Entry entry = new Entry(d.getEpochSeconds(), ordinal);
+            Entry entry = new Entry((float) (d.getEpochSeconds() - baseEpoch), ordinal);
             latestLabel = ordinalToSteepness(ordinal);
             switch (ordinal) {
                 case 1: swellEntries.add(entry); break;
@@ -647,9 +684,8 @@ public class BuoyDetailFragment extends Fragment {
         legend.setTextSize(11f);
         legend.setWordWrapEnabled(true);
 
-        configureXAxis(chart);
+        configureXAxis(chart, baseEpoch);
 
-        // Custom Y-axis: fixed range 1-4 with category labels
         int axisTextColor = resolveColor(com.google.android.material.R.attr.colorOnSurfaceVariant);
         int gridColor = resolveColor(com.google.android.material.R.attr.colorOutlineVariant);
 
@@ -671,7 +707,7 @@ public class BuoyDetailFragment extends Fragment {
 
         chart.getAxisRight().setEnabled(false);
         attachMarker(chart, new ChartMarkerView(requireContext(),
-                yValue -> ordinalToSteepness((int) Math.round(yValue)), 0));
+                yValue -> ordinalToSteepness((int) Math.round(yValue)), baseEpoch));
         chart.invalidate();
 
         cardContent.addView(chart);
@@ -731,7 +767,7 @@ public class BuoyDetailFragment extends Fragment {
                                   List<Entry> entries, int lineColor,
                                   @Nullable List<Entry> secondEntries,
                                   @Nullable Integer secondColor,
-                                  String metricKey) {
+                                  String metricKey, long baseEpochSeconds) {
         MaterialCardView card = createTileCard();
         LinearLayout cardContent = createCardContent();
 
@@ -751,9 +787,9 @@ public class BuoyDetailFragment extends Fragment {
         }
 
         chart.setData(lineData);
-        configureXAxis(chart);
+        configureXAxis(chart, baseEpochSeconds);
         configureYAxis(chart);
-        attachMarker(chart, createValueMarker(unit, 0));
+        attachMarker(chart, createValueMarker(unit, baseEpochSeconds));
         chart.invalidate();
 
         cardContent.addView(chart);
@@ -959,7 +995,7 @@ public class BuoyDetailFragment extends Fragment {
         return dataSet;
     }
 
-    private void configureXAxis(BarLineChartBase<?> chart) {
+    private void configureXAxis(BarLineChartBase<?> chart, long baseEpochSeconds) {
         int axisTextColor = resolveColor(com.google.android.material.R.attr.colorOnSurfaceVariant);
         int gridColor = resolveColor(com.google.android.material.R.attr.colorOutlineVariant);
 
@@ -970,9 +1006,6 @@ public class BuoyDetailFragment extends Fragment {
         xAxis.setGridColor(gridColor);
         xAxis.setDrawAxisLine(false);
 
-        // Adapt format to the visible data range:
-        // >2 days  → "Jan 9"  (date only, readable at multi-week scale)
-        // ≤2 days  → "M/d h:mm a" (date + time, AM/PM, consistent with list views)
         float xMin = chart.getData() != null ? chart.getData().getXMin() : 0;
         float xMax = chart.getData() != null ? chart.getData().getXMax() : 0;
         float rangeSeconds = xMax - xMin;
@@ -982,6 +1015,7 @@ public class BuoyDetailFragment extends Fragment {
         String pattern = shortRange ? "M/d h:mm a" : "MMM d";
         xAxis.setGranularity(shortRange ? 3600f : 86400f);
 
+        final long base = baseEpochSeconds;
         xAxis.setValueFormatter(new ValueFormatter() {
             private final SimpleDateFormat fmt = new SimpleDateFormat(pattern, Locale.getDefault());
 
@@ -991,7 +1025,7 @@ public class BuoyDetailFragment extends Fragment {
 
             @Override
             public String getFormattedValue(float value) {
-                return fmt.format(new Date((long) value * 1000L));
+                return fmt.format(new Date((base + (long) value) * 1000L));
             }
         });
     }

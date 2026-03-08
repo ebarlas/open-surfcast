@@ -41,6 +41,7 @@ import com.google.android.material.slider.Slider;
 
 import org.opensurfcast.MainActivity;
 import org.opensurfcast.R;
+import org.opensurfcast.buoy.BuoyDataHourlyAverager;
 import org.opensurfcast.buoy.BuoySpecWaveData;
 import org.opensurfcast.buoy.BuoyStdMetData;
 import org.opensurfcast.db.BuoySpecWaveDataDb;
@@ -254,8 +255,14 @@ public class ChartFullScreenFragment extends Fragment {
         dbExecutor.execute(() -> {
             if (metricKey.startsWith("std_")) {
                 allStdMetData = buoyStdMetDataDb.queryByStation(stationId);
+                if (userPreferences.isHourlyInterval()) {
+                    allStdMetData = BuoyDataHourlyAverager.averageStdMetByHour(allStdMetData);
+                }
             } else {
                 allSpecWaveData = buoySpecWaveDataDb.queryByStation(stationId);
+                if (userPreferences.isHourlyInterval()) {
+                    allSpecWaveData = BuoyDataHourlyAverager.averageSpecWaveByHour(allSpecWaveData);
+                }
             }
 
             if (isAdded()) {

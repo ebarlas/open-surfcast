@@ -125,6 +125,9 @@
     <string name="settings_show_chart_labels_title">Show chart labels</string>
     <string name="settings_show_chart_labels_summary_on">Tide and current values shown on chart markers</string>
     <string name="settings_show_chart_labels_summary_off">Chart markers shown without value labels</string>
+    <string name="settings_hourly_interval_title">Standard hourly interval</string>
+    <string name="settings_hourly_interval_summary_on">Buoy observations averaged into hourly intervals</string>
+    <string name="settings_hourly_interval_summary_off">Buoy observations shown at original intervals</string>
 
     <!-- Log list -->
     <string name="log_list_title">Logs</string>

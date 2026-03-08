@@ -42,6 +42,9 @@ public class UserPreferences {
     // Chart labels preference key
     private static final String KEY_SHOW_CHART_LABELS = "show_chart_labels";
 
+    // Hourly interval preference key
+    private static final String KEY_USE_HOURLY_INTERVAL = "use_hourly_interval";
+
     // Sentinel value for unset coordinates
     private static final float COORDINATE_NOT_SET = Float.NaN;
 
@@ -486,6 +489,28 @@ public class UserPreferences {
     public void setShowChartLabels(boolean show) {
         prefs.edit()
                 .putBoolean(KEY_SHOW_CHART_LABELS, show)
+                .apply();
+    }
+
+    // ========== Hourly Interval Preferences ==========
+
+    /**
+     * Returns whether buoy chart data should be averaged into hourly intervals.
+     *
+     * @return true to average into hourly bins, false to show original intervals (default)
+     */
+    public boolean isHourlyInterval() {
+        return prefs.getBoolean(KEY_USE_HOURLY_INTERVAL, false);
+    }
+
+    /**
+     * Sets whether buoy chart data should be averaged into hourly intervals.
+     *
+     * @param useHourly true to average into hourly bins, false for original intervals
+     */
+    public void setHourlyInterval(boolean useHourly) {
+        prefs.edit()
+                .putBoolean(KEY_USE_HOURLY_INTERVAL, useHourly)
                 .apply();
     }
 
