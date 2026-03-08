@@ -721,7 +721,6 @@ public class ChartFullScreenFragment extends Fragment {
             LineDataSet secondSet = createLineDataSet(secondEntries,
                     secondLabel != null ? secondLabel : label, secondColor);
             secondSet.enableDashedLine(10f, 5f, 0f);
-            secondSet.setDrawFilled(false);
             lineData.addDataSet(secondSet);
 
             // Show legend for dual-line charts
@@ -789,14 +788,13 @@ public class ChartFullScreenFragment extends Fragment {
         LineDataSet dataSet = new LineDataSet(entries, label);
         dataSet.setColor(color);
         dataSet.setLineWidth(2f);
-        dataSet.setDrawCircles(false);
+        dataSet.setDrawCircles(true);
+        dataSet.setCircleColor(color);
+        dataSet.setCircleRadius(3f);
+        dataSet.setDrawCircleHole(false);
         dataSet.setDrawValues(false);
         dataSet.setMode(LineDataSet.Mode.LINEAR);
-        dataSet.setDrawFilled(true);
-
-        int fillColor = Color.argb(38, Color.red(color), Color.green(color), Color.blue(color));
-        dataSet.setFillColor(fillColor);
-        dataSet.setFillAlpha(255);
+        dataSet.setDrawFilled(false);
 
         dataSet.setHighLightColor(resolveColor(com.google.android.material.R.attr.colorTertiary));
         dataSet.setHighlightLineWidth(1.5f);

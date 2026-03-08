@@ -391,7 +391,6 @@ public class BuoyDetailFragment extends Fragment {
         if (!gustEntries.isEmpty()) {
             LineDataSet gustSet = createLineDataSet(gustEntries, "Gust", secondaryColor);
             gustSet.enableDashedLine(10f, 5f, 0f);
-            gustSet.setDrawFilled(false);
             lineData.addDataSet(gustSet);
         }
 
@@ -782,7 +781,6 @@ public class BuoyDetailFragment extends Fragment {
 
         if (secondEntries != null && secondColor != null && !secondEntries.isEmpty()) {
             LineDataSet secondSet = createLineDataSet(secondEntries, title + " (2)", secondColor);
-            secondSet.setDrawFilled(false);
             lineData.addDataSet(secondSet);
         }
 
@@ -978,15 +976,13 @@ public class BuoyDetailFragment extends Fragment {
         LineDataSet dataSet = new LineDataSet(entries, label);
         dataSet.setColor(color);
         dataSet.setLineWidth(2f);
-        dataSet.setDrawCircles(false);
+        dataSet.setDrawCircles(true);
+        dataSet.setCircleColor(color);
+        dataSet.setCircleRadius(3f);
+        dataSet.setDrawCircleHole(false);
         dataSet.setDrawValues(false);
         dataSet.setMode(LineDataSet.Mode.LINEAR);
-        dataSet.setDrawFilled(true);
-
-        // Fill with 15% alpha of the line color
-        int fillColor = Color.argb(38, Color.red(color), Color.green(color), Color.blue(color));
-        dataSet.setFillColor(fillColor);
-        dataSet.setFillAlpha(255); // alpha is baked into fillColor
+        dataSet.setDrawFilled(false);
 
         dataSet.setHighLightColor(resolveColor(com.google.android.material.R.attr.colorTertiary));
         dataSet.setHighlightLineWidth(1f);
