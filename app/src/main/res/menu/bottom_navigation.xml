@@ -3,7 +3,7 @@
 
     <item
         android:id="@+id/nav_buoys"
-        android:icon="@drawable/ic_waves"
+        android:icon="@drawable/ic_buoy"
         android:title="@string/nav_buoys" />
 
     <item
